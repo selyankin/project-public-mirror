@@ -1,7 +1,19 @@
+# secrets
 .env
+.env.local
 secrets/
 keys/
-credentials.json
-config.local.*
-deploy/secret*
-private/
+*.pem
+*.p12
+*.jks
+*.keystore
+
+# local/system
+.vscode/
+.idea/
+.DS_Store
+node_modules/
+dist/
+build/
+coverage/
+tmp/
