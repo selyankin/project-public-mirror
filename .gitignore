@@ -1,0 +1,7 @@
+.env
+secrets/
+keys/
+credentials.json
+config.local.*
+deploy/secret*
+private/

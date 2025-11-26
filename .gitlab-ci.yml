@@ -1,0 +1,33 @@
+stages:
+  - publish
+
+variables:
+  GIT_STRATEGY: none
+
+publish_snapshot:
+  stage: publish
+  image: alpine:latest
+  only:
+    - main   # или нужная ветка
+  script:
+    - apk add --no-cache git bash rsync
+    - echo "Start snapshot publish job"
+    # Prepare temp dir
+    - TMPDIR=$(mktemp -d)
+    - echo "tmpdir=$TMPDIR"
+    # Copy allowed files/folders into snapshot (edit include list)
+    - mkdir -p $TMPDIR/repo
+    - rsync -a --prune-empty-dirs --include='chat_context/***' --include='README.md' --include='src/***' --include='package.json' --exclude='*' ./ $TMPDIR/repo
+    # Optionally, inspect for secrets
+    - echo "Files to publish:"
+    - ls -la $TMPDIR/repo || true
+    # Init git and push to public repo
+    - cd $TMPDIR/repo
+    - git init
+    - git config user.email "reckleyoff@gmail.com"
+    - git config user.name "Mishuta"
+    - git add -A
+    - git commit -m "Snapshot from $CI_PROJECT_PATH on $CI_COMMIT_SHORT_SHA"
+    - git remote add public "https://$PUBLIC_TOKEN@github.com/Mishuta/project-public-mirror.git"
+    - git push --force public master:main
+  when: on_success
