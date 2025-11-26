@@ -2,7 +2,7 @@ stages:
   - publish
 
 variables:
-  GIT_STRATEGY: none
+  GIT_STRATEGY: clone
 
 publish_snapshot:
   stage: publish
@@ -17,7 +17,7 @@ publish_snapshot:
     - echo "tmpdir=$TMPDIR"
     # Copy allowed files/folders into snapshot (edit include list)
     - mkdir -p $TMPDIR/repo
-    - rsync -a --prune-empty-dirs --include='chat_context/***' --include='README.md' --include='src/***' --include='package.json' --exclude='*' ./ $TMPDIR/repo
+    - rsync -av --prune-empty-dirs --include='chat_context/' --include='chat_context/**' --include='src/' --include='src/**' --include='README.md' --include='package.json' --exclude='*' ./ $TMPDIR/repo
     # Optionally, inspect for secrets
     - echo "Files to publish:"
     - ls -la $TMPDIR/repo || true
@@ -27,7 +27,7 @@ publish_snapshot:
     - git config user.email "reckleyoff@gmail.com"
     - git config user.name "Mishuta"
     - git add -A
-    - git commit -m "Snapshot from $CI_PROJECT_PATH on $CI_COMMIT_SHORT_SHA"
-    - git remote add public "https://$PUBLIC_TOKEN@github.com/Mishuta/project-public-mirror.git"
+    - git commit -m "Snapshot from realty"
+    - git remote add public "https://gitlab-ci-token:$PUBLIC_TOKEN@gitlab.com/Mishuta/project-public-mirror.git"
     - git push --force public master:main
   when: on_success
