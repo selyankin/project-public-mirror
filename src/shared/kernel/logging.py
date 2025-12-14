@@ -29,46 +29,46 @@ def setup_logging() -> None:
     settings = get_settings()
     root_level_name, root_level_value = _normalize_level(settings.LOG_LEVEL)
     access_level_name = (
-        'INFO' if root_level_value < logging.INFO else root_level_name
+        "INFO" if root_level_value < logging.INFO else root_level_name
     )
 
     dictConfig(
         {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'formatters': {
-                'default': {
-                    'format': '%(asctime)s | %(levelname)s | %(name)s | '
-                    '%(message)s',
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "default": {
+                    "format": "%(asctime)s | %(levelname)s | %(name)s | "
+                    "%(message)s",
                 },
             },
-            'handlers': {
-                'default': {
-                    'class': 'logging.StreamHandler',
-                    'stream': 'ext://sys.stdout',
-                    'formatter': 'default',
+            "handlers": {
+                "default": {
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stdout",
+                    "formatter": "default",
                 },
             },
-            'loggers': {
-                'uvicorn': {
-                    'handlers': ['default'],
-                    'level': root_level_name,
-                    'propagate': False,
+            "loggers": {
+                "uvicorn": {
+                    "handlers": ["default"],
+                    "level": root_level_name,
+                    "propagate": False,
                 },
-                'uvicorn.error': {
-                    'handlers': ['default'],
-                    'level': root_level_name,
-                    'propagate': False,
+                "uvicorn.error": {
+                    "handlers": ["default"],
+                    "level": root_level_name,
+                    "propagate": False,
                 },
-                'uvicorn.access': {
-                    'handlers': ['default'],
-                    'level': access_level_name,
-                    'propagate': False,
+                "uvicorn.access": {
+                    "handlers": ["default"],
+                    "level": access_level_name,
+                    "propagate": False,
                 },
             },
-            'root': {
-                'level': root_level_name,
-                'handlers': ['default'],
+            "root": {
+                "level": root_level_name,
+                "handlers": ["default"],
             },
         },
     )
