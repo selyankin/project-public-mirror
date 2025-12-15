@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 
+from src.checks.api.routes.check import router as check_router
 from src.shared.kernel.logging import get_logger, setup_logging
 from src.shared.kernel.settings import get_settings
 
@@ -21,7 +22,15 @@ def _health_router() -> APIRouter:
     return router
 
 
-ROUTER_FACTORIES: tuple[RouterFactory, ...] = (_health_router,)
+COMMON_ROUTER_FACTORIES: tuple[RouterFactory, ...] = (_health_router,)
+
+ROUTER_FACTORIES = (
+    (
+        check_router,
+        "/v1",
+        ["check"],
+    ),
+)
 
 
 def create_app() -> FastAPI:
@@ -48,7 +57,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    for factory in ROUTER_FACTORIES:
+    for factory in COMMON_ROUTER_FACTORIES:
         app.include_router(factory())
+
+    for factory in ROUTER_FACTORIES:
+        app.include_router(factory[0], prefix=factory[1], tags=factory[2])
 
     return app
