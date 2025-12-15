@@ -15,4 +15,4 @@ def ensure_tzaware(value: datetime | None) -> None:
         or value.tzinfo is None
         or value.tzinfo.utcoffset(value) is None
     ):
-        raise DomainValidationError("Datetime must be timezone-aware.")
+        raise DomainValidationError('Datetime must be timezone-aware.')

@@ -8,9 +8,9 @@ from src.shared.kernel.settings import get_settings
 
 @pytest.fixture(autouse=True)
 def reset_environment(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/mirano")
-    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-    monkeypatch.setenv("SERVICE_NAME", "mirano-service")
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/mirano')
+    monkeypatch.setenv('LOG_LEVEL', 'DEBUG')
+    monkeypatch.setenv('SERVICE_NAME', 'mirano-service')
     get_settings.cache_clear()
     logging_module._configured = False
     yield
@@ -42,4 +42,4 @@ def test_setup_logging_is_idempotent():
 
 def test_get_logger_without_name_returns_service_logger():
     logger = logging_module.get_logger()
-    assert logger.name == "mirano-service"
+    assert logger.name == 'mirano-service'

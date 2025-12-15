@@ -19,31 +19,31 @@ def make_use_case():
 
 def test_execute_returns_risk_card_dict():
     use_case = make_use_case()
-    result = use_case.execute("ул мира 7")
+    result = use_case.execute('ул мира 7')
     assert isinstance(result, dict)
-    assert result["score"] >= 0
-    assert "level" in result
-    assert isinstance(result["signals"], list)
+    assert result['score'] >= 0
+    assert 'level' in result
+    assert isinstance(result['signals'], list)
 
 
 def test_execute_detects_apartments_signal():
     use_case = make_use_case()
-    result = use_case.execute("ул мира 7 апарт")
+    result = use_case.execute('ул мира 7 апарт')
     assert any(
-        sig["code"] == "possible_apartments" for sig in result["signals"]
+        sig['code'] == 'possible_apartments' for sig in result['signals']
     )
 
 
 def test_execute_raises_domain_error_for_empty_string():
     use_case = make_use_case()
     with pytest.raises(AddressValidationError):
-        use_case.execute("   ")
+        use_case.execute('   ')
 
 
 def test_execute_handles_url_stub_signal():
     use_case = make_use_case()
-    result = use_case.execute("https://example.com")
+    result = use_case.execute('https://example.com')
     assert any(
-        sig["code"] == "url_not_supported_yet" for sig in result["signals"]
+        sig['code'] == 'url_not_supported_yet' for sig in result['signals']
     )
-    assert result["score"] == 20
+    assert result['score'] == 20

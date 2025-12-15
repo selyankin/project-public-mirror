@@ -7,20 +7,20 @@ from src.checks.domain.exceptions.address import AddressValidationError
 class AddressRaw:
     """Represents unprocessed user-provided address text."""
 
-    __slots__ = ("value",)
+    __slots__ = ('value',)
 
     def __init__(self, value: str):
         """Constructor"""
 
         if not isinstance(value, str):
-            raise TypeError("Address must be a string.")
+            raise TypeError('Address must be a string.')
 
         trimmed = value.strip()
         if not trimmed:
-            raise AddressValidationError("Address cannot be empty.")
+            raise AddressValidationError('Address cannot be empty.')
 
         if len(trimmed) > 500:
-            raise AddressValidationError("Address is too long.")
+            raise AddressValidationError('Address is too long.')
 
         self.value = trimmed
 
@@ -28,7 +28,7 @@ class AddressRaw:
         return self.value
 
     def __repr__(self) -> str:
-        return f"AddressRaw(value={self.value!r})"
+        return f'AddressRaw(value={self.value!r})'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, AddressRaw):
@@ -44,9 +44,9 @@ class AddressNormalized:
     """Represents normalized address data."""
 
     __slots__ = (
-        "raw",
-        "normalized",
-        "tokens",
+        'raw',
+        'normalized',
+        'tokens',
     )
 
     def __init__(
@@ -58,10 +58,10 @@ class AddressNormalized:
         """Constructor"""
 
         if not normalized:
-            raise AddressValidationError("Normalized address cannot be empty.")
+            raise AddressValidationError('Normalized address cannot be empty.')
 
         if not tokens:
-            raise AddressValidationError("Normalized address tokens missing.")
+            raise AddressValidationError('Normalized address tokens missing.')
 
         self.raw = raw
         self.normalized = normalized
@@ -72,8 +72,8 @@ class AddressNormalized:
 
     def __repr__(self) -> str:
         return (
-            "AddressNormalized("
-            f"normalized={self.normalized!r}, tokens={self.tokens!r})"
+            'AddressNormalized('
+            f'normalized={self.normalized!r}, tokens={self.tokens!r})'
         )
 
     def __eq__(self, other: object) -> bool:
@@ -96,12 +96,12 @@ def normalize_address(address: AddressRaw) -> AddressNormalized:
     """Return a normalized representation of the given address."""
 
     text = address.value
-    collapsed = WHITESPACE_RE.sub(" ", text)
-    comma_adjusted = COMMA_RE.sub(", ", collapsed)
+    collapsed = WHITESPACE_RE.sub(' ', text)
+    comma_adjusted = COMMA_RE.sub(', ', collapsed)
     normalized = comma_adjusted.lower()
-    tokens = tuple(normalized.split(" "))
+    tokens = tuple(normalized.split(' '))
 
     if not tokens or any(not token for token in tokens):
-        raise AddressValidationError("Normalized tokens invalid.")
+        raise AddressValidationError('Normalized tokens invalid.')
 
     return AddressNormalized(address, normalized, tokens)

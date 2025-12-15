@@ -13,18 +13,18 @@ from src.risks.domain.entities.risk_card import RiskSignal
 class SignalsPipeline:
     """Пайплайн, объединяющий несколько источников сигналов."""
 
-    __slots__ = ("_sources",)
+    __slots__ = ('_sources',)
 
     def __init__(self, data: dict[str, Any]):
         """Создать пайплайн с указанными источниками."""
 
-        sources = data.get("sources")
+        sources = data.get('sources')
         if not isinstance(sources, Iterable):
-            raise ValueError("Не передан список источников сигналов.")
+            raise ValueError('Не передан список источников сигналов.')
 
         sources_tuple = tuple(sources)
         if not sources_tuple:
-            raise ValueError("Список источников сигналов не может быть пустым.")
+            raise ValueError('Список источников сигналов не может быть пустым.')
 
         self._sources: tuple[SignalsSourcePort, ...] = sources_tuple
 

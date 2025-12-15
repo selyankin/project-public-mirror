@@ -15,17 +15,17 @@ from src.risks.domain.entities.risk_card import RiskSignal
 class SignalsProviderStub:
     """Заглушка, агрегирующая сигналы через пайплайн источников."""
 
-    __slots__ = ("_pipeline",)
+    __slots__ = ('_pipeline',)
 
     def __init__(self, data: dict[str, Any]):
         """Создать провайдер сигналов для тестовых сценариев."""
-        raw_sources = data.get("sources")
+        raw_sources = data.get('sources')
         if raw_sources:
             sources = tuple(raw_sources)
         else:
             sources = (KeywordSignalSource({}),)
 
-        self._pipeline = SignalsPipeline({"sources": sources})
+        self._pipeline = SignalsPipeline({'sources': sources})
 
     def collect(self, normalized: AddressNormalized) -> tuple[RiskSignal, ...]:
         """Собрать сигналы адреса через встроенный пайплайн."""

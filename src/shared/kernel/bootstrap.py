@@ -15,9 +15,9 @@ RouterFactory = Callable[[], APIRouter]
 def _health_router() -> APIRouter:
     router = APIRouter()
 
-    @router.get("/health")
+    @router.get('/health')
     async def health() -> dict[str, str]:
-        return {"status": "ok"}
+        return {'status': 'ok'}
 
     return router
 
@@ -27,8 +27,8 @@ COMMON_ROUTER_FACTORIES: tuple[RouterFactory, ...] = (_health_router,)
 ROUTER_FACTORIES = (
     (
         check_router,
-        "/v1",
-        ["check"],
+        '/v1',
+        ['check'],
     ),
 )
 
@@ -42,14 +42,14 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         logger.info(
-            "app_startup env=%s service=%s",
+            'app_startup env=%s service=%s',
             settings.APP_ENV,
             settings.SERVICE_NAME,
         )
         try:
             yield
         finally:
-            logger.info("app_shutdown")
+            logger.info('app_shutdown')
 
     app = FastAPI(
         title=settings.SERVICE_NAME,

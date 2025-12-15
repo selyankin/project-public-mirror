@@ -16,7 +16,7 @@ from src.checks.presentation.api.v1.serialization.output.checks import (
 router = APIRouter()
 
 
-@router.post("/check", response_model=RiskCardOut)
+@router.post('/check', response_model=RiskCardOut)
 def check_address(payload: CheckIn) -> RiskCardOut:
     """Run address check and return RiskCard."""
 

@@ -25,9 +25,9 @@ def build_summary(signals: Signals) -> str:
     """Build a short summary for the risk card."""
 
     if not signals:
-        return "No risk signals found"
+        return 'No risk signals found'
 
-    return f"Found {len(signals)} risk signals"
+    return f'Found {len(signals)} risk signals'
 
 
 def build_risk_card(signals: Signals) -> RiskCard:
@@ -37,9 +37,9 @@ def build_risk_card(signals: Signals) -> RiskCard:
     level = level_from_score(score)
     summary = build_summary(signals)
     payload = {
-        "score": score,
-        "level": level.value,
-        "summary": summary,
-        "signals": list(signals),
+        'score': score,
+        'level': level.value,
+        'summary': summary,
+        'signals': list(signals),
     }
     return RiskCard(payload)

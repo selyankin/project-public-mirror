@@ -18,7 +18,7 @@ from src.risks.domain.helpers.signals import get_signal_definition
 class CheckAddressUseCase:
     """Use-case для построения RiskCard по запросу пользователя."""
 
-    __slots__ = ("_address_resolver", "_signals_provider")
+    __slots__ = ('_address_resolver', '_signals_provider')
 
     def __init__(
         self,
@@ -33,17 +33,17 @@ class CheckAddressUseCase:
     def execute(self, raw_query: str) -> dict[str, Any]:
         """Выполнить проверку и вернуть сериализованный RiskCard."""
         query = raw_query.strip()
-        if query.lower().startswith(("http://", "https://")):
+        if query.lower().startswith(('http://', 'https://')):
             UrlRaw(query)
-            definition = get_signal_definition("url_not_supported_yet")
+            definition = get_signal_definition('url_not_supported_yet')
             signals: tuple[RiskSignal, ...] = (
                 RiskSignal(
                     {
-                        "code": definition.code,
-                        "title": definition.title,
-                        "description": definition.description,
-                        "severity": int(definition.severity),
-                        "evidence_refs": ("rule:url_not_supported",),
+                        'code': definition.code,
+                        'title': definition.title,
+                        'description': definition.description,
+                        'severity': int(definition.severity),
+                        'evidence_refs': ('rule:url_not_supported',),
                     },
                 ),
             )

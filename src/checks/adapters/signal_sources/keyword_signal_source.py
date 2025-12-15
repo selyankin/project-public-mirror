@@ -15,8 +15,8 @@ class KeywordSignalSource(SignalsSourcePort):
     """Источник сигналов, работающий по ключевым словам."""
 
     __slots__ = (
-        "_data",
-        "_builders",
+        '_data',
+        '_builders',
     )
 
     def __init__(self, data: dict[str, Any]):
@@ -51,8 +51,8 @@ class KeywordSignalSource(SignalsSourcePort):
         has_number = any(ch.isdigit() for ch in address.normalized)
         if len(tokens) < 3 or not has_number:
             return self._build_signal(
-                "address_incomplete",
-                ("rule:address_incomplete",),
+                'address_incomplete',
+                ('rule:address_incomplete',),
             )
 
         return None
@@ -62,10 +62,10 @@ class KeywordSignalSource(SignalsSourcePort):
         normalized: AddressNormalized,
     ) -> RiskSignal | None:
         text = normalized.normalized
-        if "апарт" in text or "apart" in text:
+        if 'апарт' in text or 'apart' in text:
             return self._build_signal(
-                "possible_apartments",
-                ("rule:apartments_keyword",),
+                'possible_apartments',
+                ('rule:apartments_keyword',),
             )
 
         return None
@@ -74,10 +74,10 @@ class KeywordSignalSource(SignalsSourcePort):
         self,
         normalized: AddressNormalized,
     ) -> RiskSignal | None:
-        if "общежит" in normalized.normalized:
+        if 'общежит' in normalized.normalized:
             return self._build_signal(
-                "hostel_keyword",
-                ("rule:hostel_keyword",),
+                'hostel_keyword',
+                ('rule:hostel_keyword',),
             )
 
         return None
@@ -86,10 +86,10 @@ class KeywordSignalSource(SignalsSourcePort):
         self,
         normalized: AddressNormalized,
     ) -> RiskSignal | None:
-        if "жк" in normalized.tokens:
+        if 'жк' in normalized.tokens:
             return self._build_signal(
-                "residential_complex_hint",
-                ("rule:zhk_token",),
+                'residential_complex_hint',
+                ('rule:zhk_token',),
             )
 
         return None
@@ -102,10 +102,10 @@ class KeywordSignalSource(SignalsSourcePort):
         definition = get_signal_definition(code)
         return RiskSignal(
             {
-                "code": definition.code,
-                "title": definition.title,
-                "description": definition.description,
-                "severity": int(definition.severity),
-                "evidence_refs": evidence_refs,
+                'code': definition.code,
+                'title': definition.title,
+                'description': definition.description,
+                'severity': int(definition.severity),
+                'evidence_refs': evidence_refs,
             },
         )

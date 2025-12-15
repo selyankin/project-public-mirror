@@ -8,7 +8,7 @@ def get_signal_definition(code: str) -> SignalDefinition:
     try:
         return DEFINITIONS[code]
     except KeyError as exc:
-        raise KeyError(f"Signal definition not found: {code!r}") from exc
+        raise KeyError(f'Signal definition not found: {code!r}') from exc
 
 
 def all_signal_definitions() -> tuple[SignalDefinition, ...]:

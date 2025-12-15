@@ -4,9 +4,9 @@ from enum import IntEnum, StrEnum
 class RiskLevel(StrEnum):
     """Overall risk level."""
 
-    low = "low"
-    medium = "medium"
-    high = "high"
+    low = 'low'
+    medium = 'medium'
+    high = 'high'
 
 
 class SignalSeverity(IntEnum):

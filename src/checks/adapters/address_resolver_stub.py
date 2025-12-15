@@ -12,7 +12,7 @@ from src.checks.domain.value_objects.address import (
 class AddressResolverStub:
     """In-memory stub that normalizes addresses using domain logic."""
 
-    __slots__ = ("_data",)
+    __slots__ = ('_data',)
 
     def __init__(self, data: dict):
         """Create resolver stub instance."""
