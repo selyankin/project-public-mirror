@@ -11,7 +11,10 @@ from src.checks.domain.value_objects.address import AddressValidationError
 def make_use_case():
     address_resolver = AddressResolverStub({})
     signals_provider = SignalsProviderStub({})
-    return CheckAddressUseCase(address_resolver, signals_provider)
+    return CheckAddressUseCase(
+        address_resolver,
+        signals_provider,
+    )
 
 
 def test_execute_returns_risk_card_dict():
@@ -35,3 +38,12 @@ def test_execute_raises_domain_error_for_empty_string():
     use_case = make_use_case()
     with pytest.raises(AddressValidationError):
         use_case.execute("   ")
+
+
+def test_execute_handles_url_stub_signal():
+    use_case = make_use_case()
+    result = use_case.execute("https://example.com")
+    assert any(
+        sig["code"] == "url_not_supported_yet" for sig in result["signals"]
+    )
+    assert result["score"] == 20

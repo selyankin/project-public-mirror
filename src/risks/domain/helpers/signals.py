@@ -1,5 +1,5 @@
-from risks.domain.constants.signals import DEFINITIONS, ORDERED_CODES
-from risks.domain.signals_catalog import SignalDefinition
+from src.risks.domain.constants.signals import DEFINITIONS, ORDERED_CODES
+from src.risks.domain.signals_catalog import SignalDefinition
 
 
 def get_signal_definition(code: str) -> SignalDefinition:

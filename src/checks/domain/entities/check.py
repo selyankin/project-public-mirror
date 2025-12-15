@@ -6,9 +6,9 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from checks.domain.constants.enums.domain import CheckStatus, QueryType
-from checks.domain.exceptions.domain import DomainValidationError
-from checks.domain.helpers.dt import ensure_tzaware, utcnow
+from src.checks.domain.constants.enums.domain import CheckStatus, QueryType
+from src.checks.domain.exceptions.domain import DomainValidationError
+from src.checks.domain.helpers.dt import ensure_tzaware, utcnow
 
 
 class CheckId:

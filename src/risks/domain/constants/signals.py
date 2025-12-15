@@ -1,4 +1,4 @@
-from risks.domain.signals_catalog import SignalDefinition
+from src.risks.domain.signals_catalog import SignalDefinition
 
 DEFINITIONS: dict[str, SignalDefinition] = {
     "address_incomplete": SignalDefinition(
@@ -41,6 +41,16 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             "severity": "low",
         },
     ),
+    "url_not_supported_yet": SignalDefinition(
+        {
+            "code": "url_not_supported_yet",
+            "title": "URL checks are not supported yet",
+            "description": (
+                "The provided URL cannot be processed at the moment"
+            ),
+            "severity": "low",
+        },
+    ),
 }
 
 ORDERED_CODES: tuple[str, ...] = (
@@ -48,4 +58,5 @@ ORDERED_CODES: tuple[str, ...] = (
     "possible_apartments",
     "hostel_keyword",
     "residential_complex_hint",
+    "url_not_supported_yet",
 )
