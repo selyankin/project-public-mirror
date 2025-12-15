@@ -27,6 +27,7 @@ def test_all_signal_definitions_order():
         'hostel_keyword',
         'residential_complex_hint',
         'url_not_supported_yet',
+        'query_type_not_supported',
     ]
 
 

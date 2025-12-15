@@ -4,11 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.checks.application.helpers.url_extraction import (
+    extract_address_from_url,
+)
 from src.checks.application.ports.checks import (
     AddressResolverPort,
     SignalsProviderPort,
 )
+from src.checks.domain.constants.enums.domain import QueryType
 from src.checks.domain.value_objects.address import normalize_address_raw
+from src.checks.domain.value_objects.query import CheckQuery
 from src.checks.domain.value_objects.url import UrlRaw
 from src.risks.application.scoring import build_risk_card
 from src.risks.domain.entities.risk_card import RiskSignal
@@ -31,27 +36,72 @@ class CheckAddressUseCase:
         self._signals_provider = signals_provider
 
     def execute(self, raw_query: str) -> dict[str, Any]:
-        """Выполнить проверку и вернуть сериализованный RiskCard."""
-        query = raw_query.strip()
-        if query.lower().startswith(('http://', 'https://')):
-            UrlRaw(query)
-            definition = get_signal_definition('url_not_supported_yet')
-            signals: tuple[RiskSignal, ...] = (
-                RiskSignal(
-                    {
-                        'code': definition.code,
-                        'title': definition.title,
-                        'description': definition.description,
-                        'severity': int(definition.severity),
-                        'evidence_refs': ('rule:url_not_supported',),
-                    },
+        """Выполнить проверку по строке адреса (устаревший формат)."""
+
+        return self.execute_query(
+            CheckQuery(
+                {
+                    'type': QueryType.address.value,
+                    'query': raw_query,
+                }
+            ),
+        )
+
+    def execute_query(self, query: CheckQuery) -> dict[str, Any]:
+        """Выполнить проверку для типизированного запроса."""
+
+        if query.type is QueryType.address:
+            signals = self._collect_address_signals(query.query)
+
+        elif query.type is QueryType.url:
+            url_vo = UrlRaw(query.query)
+            extracted = extract_address_from_url(url_vo)
+
+            if extracted:
+                signals = self._collect_address_signals(extracted)
+            else:
+                signals = (
+                    self._build_single_signal(
+                        'url_not_supported_yet',
+                        ('rule:url_not_supported',),
+                    ),
+                )
+
+        else:
+            signals = (
+                self._build_single_signal(
+                    'query_type_not_supported',
+                    ('rule:query_type_not_supported',),
                 ),
             )
 
-        else:
-            raw_address = normalize_address_raw(raw_query)
-            normalized = self._address_resolver.normalize(raw_address)
-            signals = self._signals_provider.collect(normalized)
-
         risk_card = build_risk_card(signals)
         return risk_card.to_dict()
+
+    def _collect_address_signals(
+        self,
+        raw_address: str,
+    ) -> tuple[RiskSignal, ...]:
+        """Собрать сигналы по строке адреса."""
+
+        normalized_raw = normalize_address_raw(raw_address)
+        normalized = self._address_resolver.normalize(normalized_raw)
+        return self._signals_provider.collect(normalized)
+
+    @staticmethod
+    def _build_single_signal(
+        code: str,
+        evidence: tuple[str, ...],
+    ) -> RiskSignal:
+        """Создать единичный сигнал по коду справочника."""
+
+        definition = get_signal_definition(code)
+        return RiskSignal(
+            {
+                'code': definition.code,
+                'title': definition.title,
+                'description': definition.description,
+                'severity': int(definition.severity),
+                'evidence_refs': evidence,
+            },
+        )

@@ -1,34 +1,63 @@
-"""API routes for address checks and risk cards."""
+"""API маршруты для проверки адресов и URL."""
 
 from __future__ import annotations
 
+from checks.presentation.api.v1.serialization.input.checks import (
+    CheckIn,
+    LegacyCheckIn,
+)
+from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
 from fastapi import APIRouter, HTTPException
 
 from src.checks.adapters.address_resolver_stub import AddressResolverStub
 from src.checks.adapters.signals_provider_stub import SignalsProviderStub
 from src.checks.application.use_cases.check_address import CheckAddressUseCase
 from src.checks.domain.value_objects.address import AddressValidationError
-from src.checks.presentation.api.v1.serialization.input.checks import CheckIn
-from src.checks.presentation.api.v1.serialization.output.checks import (
-    RiskCardOut,
-)
+from src.checks.domain.value_objects.query import CheckQuery, QueryInputError
 
 router = APIRouter()
 
 
-@router.post('/check', response_model=RiskCardOut)
-def check_address(payload: CheckIn) -> RiskCardOut:
-    """Run address check and return RiskCard."""
+def _build_use_case() -> CheckAddressUseCase:
+    """Создать use-case с тестовыми адаптерами."""
 
     address_resolver = AddressResolverStub({})
     signals_provider = SignalsProviderStub({})
-    use_case = CheckAddressUseCase(
+
+    return CheckAddressUseCase(
         address_resolver,
         signals_provider,
     )
 
+
+@router.post('/check', response_model=RiskCardOut)
+def check(payload: CheckIn) -> RiskCardOut:
+    """Выполнить проверку по унифицированному запросу."""
+
+    use_case = _build_use_case()
+    try:
+        query = CheckQuery(
+            {
+                'type': payload.type,
+                'query': payload.query,
+            }
+        )
+        result = use_case.execute_query(query)
+
+    except (QueryInputError, AddressValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return RiskCardOut(**result)
+
+
+@router.post('/check/address', response_model=RiskCardOut)
+def check_address(payload: LegacyCheckIn) -> RiskCardOut:
+    """Выполнить проверку по устаревшему адресу."""
+
+    use_case = _build_use_case()
     try:
         result = use_case.execute(payload.address)
+
     except AddressValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

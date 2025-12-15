@@ -51,6 +51,16 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': 'low',
         },
     ),
+    'query_type_not_supported': SignalDefinition(
+        {
+            'code': 'query_type_not_supported',
+            'title': 'Query type is not supported yet',
+            'description': (
+                'This query type is not supported in the current version'
+            ),
+            'severity': 'low',
+        },
+    ),
 }
 
 ORDERED_CODES: tuple[str, ...] = (
@@ -59,4 +69,5 @@ ORDERED_CODES: tuple[str, ...] = (
     'hostel_keyword',
     'residential_complex_hint',
     'url_not_supported_yet',
+    'query_type_not_supported',
 )

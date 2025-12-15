@@ -2,6 +2,13 @@ from pydantic import BaseModel
 
 
 class CheckIn(BaseModel):
-    """Incoming payload with raw address."""
+    """Унифицированный входной запрос."""
+
+    type: str
+    query: str
+
+
+class LegacyCheckIn(BaseModel):
+    """Устаревший формат входа с адресом."""
 
     address: str

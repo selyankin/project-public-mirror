@@ -12,7 +12,7 @@ class RiskSignalOut(BaseModel):
 
 
 class RiskCardOut(BaseModel):
-    """Serialized risk card representation."""
+    """Сериализованный RiskCard."""
 
     score: int
     level: str

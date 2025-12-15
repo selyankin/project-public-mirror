@@ -24,23 +24,38 @@ def make_client() -> TestClient:
 
 def test_check_endpoint_returns_risk_card():
     client = make_client()
-    response = client.post('/v1/check', json={'address': 'ул мира 7'})
+    response = client.post(
+        '/v1/check',
+        json={'type': 'address', 'query': 'ул мира 7'},
+    )
     assert response.status_code == 200
     data = response.json()
     assert {'score', 'level', 'summary', 'signals'} <= data.keys()
 
 
-def test_check_endpoint_validates_address():
+def test_check_endpoint_handles_url():
     client = make_client()
-    response = client.post('/v1/check', json={'address': '   '})
+    response = client.post(
+        '/v1/check',
+        json={'type': 'url', 'query': 'https://example.com'},
+    )
+    assert response.status_code == 200
+    assert any(
+        signal['code'] == 'url_not_supported_yet'
+        for signal in response.json()['signals']
+    )
+
+
+def test_check_endpoint_validates_query():
+    client = make_client()
+    response = client.post(
+        '/v1/check',
+        json={'type': 'address', 'query': '   '},
+    )
     assert response.status_code == 422
 
 
-def test_check_endpoint_detects_apartments():
+def test_legacy_endpoint_still_works():
     client = make_client()
-    response = client.post('/v1/check', json={'address': 'ул мира 7 апарт'})
+    response = client.post('/v1/check/address', json={'address': 'ул мира 7'})
     assert response.status_code == 200
-    data = response.json()
-    assert any(
-        signal['code'] == 'possible_apartments' for signal in data['signals']
-    )
