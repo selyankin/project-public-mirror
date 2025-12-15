@@ -12,6 +12,7 @@ from src.checks.application.ports.checks import (
     SignalsProviderPort,
 )
 from src.checks.domain.constants.enums.domain import QueryType
+from src.checks.domain.helpers.address_heuristics import is_address_like
 from src.checks.domain.value_objects.address import normalize_address_raw
 from src.checks.domain.value_objects.query import CheckQuery
 from src.checks.domain.value_objects.url import UrlRaw
@@ -51,13 +52,20 @@ class CheckAddressUseCase:
         """Выполнить проверку для типизированного запроса."""
 
         if query.type is QueryType.address:
-            signals = self._collect_address_signals(query.query)
+            if not is_address_like(query.query):
+                signals = (
+                    self._build_single_signal(
+                        'query_not_address_like',
+                        ('heuristic:address_like',),
+                    ),
+                )
+            else:
+                signals = self._collect_address_signals(query.query)
 
         elif query.type is QueryType.url:
             url_vo = UrlRaw(query.query)
             extracted = extract_address_from_url(url_vo)
-
-            if extracted:
+            if extracted and is_address_like(extracted):
                 signals = self._collect_address_signals(extracted)
             else:
                 signals = (

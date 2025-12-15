@@ -61,6 +61,14 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': 'low',
         },
     ),
+    'query_not_address_like': SignalDefinition(
+        {
+            'code': 'query_not_address_like',
+            'title': 'Query is not address-like',
+            'description': ('The provided text does not look like an address'),
+            'severity': 'medium',
+        },
+    ),
 }
 
 ORDERED_CODES: tuple[str, ...] = (
@@ -70,4 +78,5 @@ ORDERED_CODES: tuple[str, ...] = (
     'residential_complex_hint',
     'url_not_supported_yet',
     'query_type_not_supported',
+    'query_not_address_like',
 )

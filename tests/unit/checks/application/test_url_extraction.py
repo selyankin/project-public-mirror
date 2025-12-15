@@ -14,6 +14,7 @@ def test_extracts_address_param():
 def test_extracts_query_param():
     url = UrlRaw('https://example.com/?q=ул%20мира%207')
     assert extract_address_from_url(url) == 'ул мира 7'
+    assert is_supported_url(url) is True
 
 
 def test_returns_none_without_params():

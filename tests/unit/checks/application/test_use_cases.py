@@ -45,6 +45,24 @@ def test_execute_query_address_path():
     assert 'level' in result
 
 
+def test_address_query_not_address_like_returns_signal():
+    use_case = make_use_case()
+    query = CheckQuery({'type': 'address', 'query': 'привет как дела'})
+    result = use_case.execute_query(query)
+    assert any(
+        sig['code'] == 'query_not_address_like' for sig in result['signals']
+    )
+
+
+def test_address_query_keyword_only_passes():
+    use_case = make_use_case()
+    query = CheckQuery({'type': 'address', 'query': 'улица ленина'})
+    result = use_case.execute_query(query)
+    assert all(
+        sig['code'] != 'query_not_address_like' for sig in result['signals']
+    )
+
+
 def test_execute_query_url_with_address():
     use_case = make_use_case()
     query = CheckQuery(
@@ -56,42 +74,24 @@ def test_execute_query_url_with_address():
     )
 
 
-def test_execute_query_url_without_address():
+def test_execute_query_url_with_non_address_text():
     use_case = make_use_case()
-    query = CheckQuery({'type': 'url', 'query': 'https://x.test/'})
+    query = CheckQuery(
+        {
+            'type': 'url',
+            'query': 'https://x.test/?address=привет+как+дела',
+        }
+    )
     result = use_case.execute_query(query)
     assert any(
         sig['code'] == 'url_not_supported_yet' for sig in result['signals']
     )
 
 
-def test_url_with_embedded_address_uses_address_flow():
+def test_execute_query_url_without_address():
     use_case = make_use_case()
-    result = use_case.execute_query(
-        CheckQuery(
-            {
-                'type': 'url',
-                'query': 'https://example.com/?address=ул+мира+7',
-            },
-        ),
-    )
-    assert all(
-        signal['code'] != 'url_not_supported_yet'
-        for signal in result['signals']
-    )
-
-
-def test_url_without_address_returns_placeholder_signal():
-    use_case = make_use_case()
-    result = use_case.execute_query(
-        CheckQuery(
-            {
-                'type': 'url',
-                'query': 'https://example.com/',
-            },
-        ),
-    )
+    query = CheckQuery({'type': 'url', 'query': 'https://x.test/'})
+    result = use_case.execute_query(query)
     assert any(
-        signal['code'] == 'url_not_supported_yet'
-        for signal in result['signals']
+        sig['code'] == 'url_not_supported_yet' for sig in result['signals']
     )
