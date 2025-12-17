@@ -3,7 +3,7 @@
 from functools import cache
 from typing import ClassVar, Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 EnvName = Literal['local', 'dev', 'test', 'staging', 'prod']
@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = 'flaffy'
     DEBUG: bool = False
     TIMEZONE: str = 'Europe/Stockholm'
+    FIAS_MODE: Literal['stub', 'api'] = 'stub'
+    FIAS_BASE_URL: str | None = None
+    FIAS_TOKEN: str | None = None
+    FIAS_TIMEOUT_SECONDS: float = 5.0
 
     @property
     def is_prod(self) -> bool:
@@ -42,6 +46,11 @@ class Settings(BaseSettings):
     def is_local(self) -> bool:
         """Return True when the service runs in a local environment."""
         return self.APP_ENV == 'local'
+
+    @property
+    def fias_enabled(self) -> bool:
+        """Return True if FIAS integration should be used."""
+        return self.FIAS_MODE == 'api'
 
     @field_validator('DATABASE_URL')
     @classmethod
@@ -58,6 +67,21 @@ class Settings(BaseSettings):
                 '"postgresql+asyncpg://".',
             )
         return value
+
+    @model_validator(mode='after')
+    def validate_fias(self) -> 'Settings':
+        """Ensure FIAS settings are configured when API mode is enabled."""
+        if self.fias_enabled:
+            if not self.FIAS_BASE_URL:
+                raise ValueError(
+                    'FIAS_BASE_URL is required when FIAS_MODE=api.',
+                )
+            if not self.FIAS_TOKEN:
+                raise ValueError(
+                    'FIAS_TOKEN is required when FIAS_MODE=api.',
+                )
+
+        return self
 
 
 @cache

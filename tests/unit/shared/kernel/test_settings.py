@@ -24,6 +24,8 @@ def test_settings_defaults():
     assert settings.SERVICE_NAME == 'flaffy'
     assert settings.TIMEZONE == 'Europe/Stockholm'
     assert settings.DEBUG is False
+    assert settings.FIAS_MODE == 'stub'
+    assert settings.fias_enabled is False
 
 
 def test_debug_mode(base_env, monkeypatch):
@@ -47,6 +49,20 @@ def test_database_url_validation():
             DATABASE_URL='http://localhost',
         )
     assert 'DATABASE_URL must use one of' in str(exc_info.value)
+
+
+def test_fias_validation_requires_fields(monkeypatch, base_env):
+    monkeypatch.setenv('FIAS_MODE', 'api')
+    with pytest.raises(ValueError):
+        Settings()
+
+
+def test_fias_api_mode_valid(monkeypatch, base_env):
+    monkeypatch.setenv('FIAS_MODE', 'api')
+    monkeypatch.setenv('FIAS_BASE_URL', 'https://fias.local')
+    monkeypatch.setenv('FIAS_TOKEN', 'secret')
+    settings = Settings()
+    assert settings.fias_enabled is True
 
 
 def test_get_settings_cache(base_env):

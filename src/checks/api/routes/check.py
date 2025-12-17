@@ -2,25 +2,28 @@
 
 from __future__ import annotations
 
-from checks.adapters.address_resolver_stub import AddressResolverStub
 from checks.adapters.signals_provider_stub import SignalsProviderStub
 from checks.application.use_cases.check_address import CheckAddressUseCase
 from checks.domain.value_objects.address import AddressValidationError
 from checks.domain.value_objects.query import CheckQuery, QueryInputError
+from checks.infrastructure.address_resolver_factory import (
+    build_address_resolver,
+)
 from checks.presentation.api.v1.serialization.input.checks import (
     CheckIn,
     LegacyCheckIn,
 )
 from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
 from fastapi import APIRouter, HTTPException
+from shared.kernel.settings import get_settings
 
 router = APIRouter()
 
 
 def _build_use_case() -> CheckAddressUseCase:
     """Создать use-case с тестовыми адаптерами."""
-
-    address_resolver = AddressResolverStub({})
+    settings = get_settings()
+    address_resolver = build_address_resolver(settings)
     signals_provider = SignalsProviderStub({})
 
     return CheckAddressUseCase(
