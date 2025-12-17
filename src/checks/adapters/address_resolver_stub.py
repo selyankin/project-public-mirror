@@ -21,4 +21,6 @@ class AddressResolverStub:
     @staticmethod
     def normalize(raw: AddressRaw) -> AddressNormalized:
         """Normalize raw address using domain normalization rules."""
-        return normalize_address(raw)
+        normalized = normalize_address(raw)
+        normalized.source = 'stub'
+        return normalized

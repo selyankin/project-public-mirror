@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from checks.application.ports.signal_sources import SignalsSourcePort
+from checks.application.ports.signal_sources import (
+    SignalsContext,
+    SignalsSourcePort,
+)
 from checks.domain.value_objects.address import AddressNormalized
 from risks.domain.entities.risk_card import RiskSignal
 from risks.domain.signals_catalog import get_signal_definition
@@ -32,7 +35,12 @@ class KeywordSignalSource(SignalsSourcePort):
             self._rule_residential_complex,
         )
 
-    def collect(self, normalized: AddressNormalized) -> tuple[RiskSignal, ...]:
+    def collect(
+        self,
+        normalized: AddressNormalized,
+        *,
+        context: SignalsContext | None = None,
+    ) -> tuple[RiskSignal, ...]:
         """Собрать сигналы, основанные на ключевых правилах."""
 
         signals: list[RiskSignal] = []

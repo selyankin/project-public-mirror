@@ -1,7 +1,12 @@
 """Value objects for address data in the Check domain."""
 
+from typing import Literal
+
 from checks.domain.constants.address import COMMA_RE, WHITESPACE_RE
 from checks.domain.exceptions.address import AddressValidationError
+
+AddressConfidence = Literal['exact', 'high', 'medium', 'low', 'unknown']
+AddressSource = Literal['stub', 'fias']
 
 
 class AddressRaw:
@@ -47,6 +52,8 @@ class AddressNormalized:
         'raw',
         'normalized',
         'tokens',
+        'confidence',
+        'source',
     )
 
     def __init__(
@@ -54,6 +61,9 @@ class AddressNormalized:
         raw: AddressRaw,
         normalized: str,
         tokens: tuple[str, ...],
+        *,
+        confidence: AddressConfidence = 'unknown',
+        source: AddressSource = 'stub',
     ):
         """Constructor"""
 
@@ -66,15 +76,11 @@ class AddressNormalized:
         self.raw = raw
         self.normalized = normalized
         self.tokens = tokens
+        self.confidence = confidence
+        self.source = source
 
     def __str__(self) -> str:
         return self.normalized
-
-    def __repr__(self) -> str:
-        return (
-            'AddressNormalized('
-            f'normalized={self.normalized!r}, tokens={self.tokens!r})'
-        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, AddressNormalized):
@@ -92,6 +98,61 @@ def normalize_address_raw(raw: str) -> AddressRaw:
     return AddressRaw(raw)
 
 
+def evaluate_address_confidence(
+    addr: AddressNormalized,
+) -> AddressConfidence:
+    """Грубая оценка точности нормализации адреса."""
+
+    lower = addr.normalized.lower()
+
+    def _contains_any(keywords: tuple[str, ...]) -> bool:
+        return any(keyword in lower for keyword in keywords)
+
+    has_street = _contains_any(
+        (
+            'ул.',
+            'ул ',
+            'улица',
+            'пр-т',
+            'проспект',
+            'просп.',
+            'пер.',
+            'переулок',
+            'бульвар',
+            'бул.',
+            'шоссе',
+        ),
+    )
+    has_city = _contains_any(
+        (
+            'г.',
+            'г ',
+            'город',
+            'пос.',
+            'пос ',
+            'поселок',
+            'посёлок',
+            'пгт',
+            'дер.',
+            'деревня',
+            'село',
+        ),
+    )
+    has_digits = any(ch.isdigit() for ch in lower)
+    has_house_marker = _contains_any(('д.', 'д ', 'дом', 'дом ', 'house'))
+    has_house = has_digits and has_house_marker
+
+    if has_house and has_street and has_city:
+        return 'exact'
+    if has_house and has_street:
+        return 'high'
+    if has_street:
+        return 'medium'
+    if has_city:
+        return 'low'
+    return 'unknown'
+
+
 def normalize_address(address: AddressRaw) -> AddressNormalized:
     """Return a normalized representation of the given address."""
 
@@ -104,4 +165,7 @@ def normalize_address(address: AddressRaw) -> AddressNormalized:
     if not tokens or any(not token for token in tokens):
         raise AddressValidationError('Normalized tokens invalid.')
 
-    return AddressNormalized(address, normalized, tokens)
+    normalized_addr = AddressNormalized(address, normalized, tokens)
+    normalized_addr.confidence = evaluate_address_confidence(normalized_addr)
+    normalized_addr.source = 'stub'
+    return normalized_addr

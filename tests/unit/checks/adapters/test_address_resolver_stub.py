@@ -14,6 +14,7 @@ def test_normalize_returns_address_normalized():
     normalized = resolver().normalize(raw)
     assert isinstance(normalized, AddressNormalized)
     assert normalized.normalized == 'main street 12'
+    assert normalized.source == 'stub'
 
 
 def test_normalization_is_deterministic():

@@ -13,7 +13,10 @@ from checks.application.ports.checks import (
 )
 from checks.domain.constants.enums.domain import QueryType
 from checks.domain.helpers.address_heuristics import is_address_like
-from checks.domain.value_objects.address import normalize_address_raw
+from checks.domain.value_objects.address import (
+    AddressNormalized,
+    normalize_address_raw,
+)
 from checks.domain.value_objects.query import CheckQuery
 from checks.domain.value_objects.url import UrlRaw
 from risks.application.scoring import build_risk_card
@@ -51,6 +54,8 @@ class CheckAddressUseCase:
     def execute_query(self, query: CheckQuery) -> dict[str, Any]:
         """Выполнить проверку для типизированного запроса."""
 
+        normalized_result: AddressNormalized | None = None
+
         if query.type is QueryType.address:
             if not is_address_like(query.query):
                 signals = (
@@ -60,13 +65,17 @@ class CheckAddressUseCase:
                     ),
                 )
             else:
-                signals = self._collect_address_signals(query.query)
+                normalized_result, signals = self._collect_address_signals(
+                    query.query,
+                )
 
         elif query.type is QueryType.url:
             url_vo = UrlRaw(query.query)
             extracted = extract_address_from_url(url_vo)
             if extracted and is_address_like(extracted):
-                signals = self._collect_address_signals(extracted)
+                normalized_result, signals = self._collect_address_signals(
+                    extracted,
+                )
             else:
                 signals = (
                     self._build_single_signal(
@@ -84,17 +93,24 @@ class CheckAddressUseCase:
             )
 
         risk_card = build_risk_card(signals)
-        return risk_card.to_dict()
+        result = risk_card.to_dict()
+        result['address_confidence'] = (
+            normalized_result.confidence if normalized_result else None
+        )
+        result['address_source'] = (
+            normalized_result.source if normalized_result else None
+        )
+        return result
 
     def _collect_address_signals(
         self,
         raw_address: str,
-    ) -> tuple[RiskSignal, ...]:
+    ) -> tuple[AddressNormalized, tuple[RiskSignal, ...]]:
         """Собрать сигналы по строке адреса."""
 
         normalized_raw = normalize_address_raw(raw_address)
         normalized = self._address_resolver.normalize(normalized_raw)
-        return self._signals_provider.collect(normalized)
+        return normalized, self._signals_provider.collect(normalized)
 
     @staticmethod
     def _build_single_signal(

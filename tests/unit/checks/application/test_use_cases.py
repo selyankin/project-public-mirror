@@ -21,6 +21,14 @@ def test_execute_returns_risk_card_dict():
     result = use_case.execute('ул мира 7')
     assert isinstance(result, dict)
     assert {'score', 'level', 'signals'} <= result.keys()
+    assert result['address_source'] == 'stub'
+    assert result['address_confidence'] in (
+        'exact',
+        'high',
+        'medium',
+        'low',
+        'unknown',
+    )
 
 
 def test_execute_detects_apartments_signal():

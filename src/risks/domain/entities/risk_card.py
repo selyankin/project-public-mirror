@@ -111,7 +111,8 @@ class RiskCard:
                 f'Score {self.score} requires level {expected_level.value}.',
             )
 
-    def _coerce_signals(self, value: Any) -> tuple[RiskSignal, ...]:
+    @staticmethod
+    def _coerce_signals(value: Any) -> tuple[RiskSignal, ...]:
         if value is None:
             return ()
 

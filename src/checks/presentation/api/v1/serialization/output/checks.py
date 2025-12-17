@@ -18,3 +18,5 @@ class RiskCardOut(BaseModel):
     level: str
     summary: str
     signals: list[RiskSignalOut]
+    address_confidence: str | None = None
+    address_source: str | None = None

@@ -28,7 +28,12 @@ class DummySource:
     def __init__(self, signals: tuple[RiskSignal, ...]):
         self._signals = signals
 
-    def collect(self, normalized: AddressNormalized) -> tuple[RiskSignal, ...]:
+    def collect(
+        self,
+        normalized: AddressNormalized,  # noqa: ARG002
+        *,
+        context=None,  # noqa: ANN001
+    ) -> tuple[RiskSignal, ...]:
         return self._signals
 
 

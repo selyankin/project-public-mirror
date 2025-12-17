@@ -127,6 +127,39 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': 'low',
         },
     ),
+    'address_confidence_unknown': SignalDefinition(
+        {
+            'code': 'address_confidence_unknown',
+            'title': 'Невозможно определить точность адреса',
+            'description': (
+                'Запрос адреса слишком общий или неструктурный, '
+                'что снижает точность проверки'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'address_confidence_low': SignalDefinition(
+        {
+            'code': 'address_confidence_low',
+            'title': 'Низкая точность адреса',
+            'description': (
+                'Адрес содержит только населённый пункт и не позволяет '
+                'однозначно определить объект'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'address_source_stub': SignalDefinition(
+        {
+            'code': 'address_source_stub',
+            'title': 'Адрес определён без ФИАС',
+            'description': (
+                'Нормализация выполнена локально и может отличаться от '
+                'данных ФИАС'
+            ),
+            'severity': SignalSeverity.low,
+        },
+    ),
     'url_not_supported_yet': SignalDefinition(
         {
             'code': 'url_not_supported_yet',
@@ -162,6 +195,9 @@ ORDERED_CODES: tuple[str, ...] = (
     'possible_apartments',
     'hostel_keyword',
     'residential_complex_hint',
+    'address_confidence_unknown',
+    'address_confidence_low',
+    'address_source_stub',
     'url_not_supported_yet',
     'query_type_not_supported',
     'query_not_address_like',

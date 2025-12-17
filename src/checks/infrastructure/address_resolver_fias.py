@@ -36,6 +36,7 @@ class FiasAddressResolver(AddressResolverPort):
     def normalize(self, raw: AddressRaw) -> AddressNormalized:
         """Normalize address using FIAS (stubbed for now)."""
 
+        normalized = normalize_address(raw)
         try:
             self._client.search_address_item(raw.value)
         except FiasError as exc:
@@ -43,5 +44,8 @@ class FiasAddressResolver(AddressResolverPort):
                 'FIAS lookup failed, fallback to domain normalization: %s',
                 exc,
             )
+            normalized.source = 'stub'
+        else:
+            normalized.source = 'fias'
 
-        return normalize_address(raw)
+        return normalized

@@ -16,8 +16,9 @@ def _signals(text: str):
 
 def test_incomplete_address_signal_triggered():
     signals = _signals('москва')
-    assert len(signals) == 1
-    assert signals[0].code == 'address_incomplete'
+    codes = [signal.code for signal in signals]
+    assert 'address_incomplete' in codes
+    assert 'address_confidence_unknown' in codes
 
 
 def test_apartments_signal():
@@ -40,6 +41,8 @@ def test_residential_complex_signal():
 def test_signal_order_stability():
     signals = _signals('общежитие жк апарт 123')
     assert [signal.code for signal in signals] == [
+        'address_confidence_unknown',
+        'address_source_stub',
         'possible_apartments',
         'hostel_keyword',
         'residential_complex_hint',
