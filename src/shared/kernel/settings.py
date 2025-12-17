@@ -1,4 +1,4 @@
-"""Shared configuration settings for the Mirano services."""
+"""Shared configuration settings for the Flaffy services."""
 
 from functools import cache
 from typing import ClassVar, Literal
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     APP_ENV: EnvName = 'local'
     DATABASE_URL: str
     LOG_LEVEL: LogLevel = 'INFO'
-    SERVICE_NAME: str = 'mirano'
+    SERVICE_NAME: str = 'flaffy'
     DEBUG: bool = False
     TIMEZONE: str = 'Europe/Stockholm'
 

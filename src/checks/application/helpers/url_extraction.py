@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
 
-from src.checks.domain.value_objects.url import UrlRaw
+from checks.domain.value_objects.url import UrlRaw
 
 
 def extract_address_from_url(url: UrlRaw) -> str | None:

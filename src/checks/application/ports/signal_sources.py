@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from src.checks.domain.value_objects.address import AddressNormalized
-from src.risks.domain.entities.risk_card import RiskSignal
+from checks.domain.value_objects.address import AddressNormalized
+from risks.domain.entities.risk_card import RiskSignal
 
 
 class SignalsSourcePort(Protocol):

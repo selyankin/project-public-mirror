@@ -1,9 +1,9 @@
-from src.risks.application.scoring import (
+from risks.application.scoring import (
     build_risk_card,
     build_summary,
     score_from_signals,
 )
-from src.risks.domain.entities.risk_card import RiskSignal
+from risks.domain.entities.risk_card import RiskSignal
 
 
 def signal(severity, code_prefix='SIG'):

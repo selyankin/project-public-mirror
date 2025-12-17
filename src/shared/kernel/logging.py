@@ -4,7 +4,7 @@ import logging
 from logging.config import dictConfig
 from typing import Final
 
-from src.shared.kernel.settings import get_settings
+from shared.kernel.settings import get_settings
 
 _configured: bool = False
 _LEVEL_NAMES: Final[dict[str, int]] = logging.getLevelNamesMapping()

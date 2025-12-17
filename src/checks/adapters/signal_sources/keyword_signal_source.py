@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from src.checks.application.ports.signal_sources import SignalsSourcePort
-from src.checks.domain.value_objects.address import AddressNormalized
-from src.risks.domain.entities.risk_card import RiskSignal
-from src.risks.domain.helpers.signals import get_signal_definition
+from checks.application.ports.signal_sources import SignalsSourcePort
+from checks.domain.value_objects.address import AddressNormalized
+from risks.domain.entities.risk_card import RiskSignal
+from risks.domain.signals_catalog import get_signal_definition
 
 
 class KeywordSignalSource(SignalsSourcePort):

@@ -140,11 +140,11 @@ src/facts/presentation/api/v1/presenters/__init__.py
 src/facts/presentation/api/v1/routes/__init__.py
 src/facts/presentation/api/v1/schemas/__init__.py
 src/facts/presentation/cli/__init__.py
-src/mirano.egg-info/PKG-INFO
-src/mirano.egg-info/SOURCES.txt
-src/mirano.egg-info/dependency_links.txt
-src/mirano.egg-info/requires.txt
-src/mirano.egg-info/top_level.txt
+src/flaffy.egg-info/PKG-INFO
+src/flaffy.egg-info/SOURCES.txt
+src/flaffy.egg-info/dependency_links.txt
+src/flaffy.egg-info/requires.txt
+src/flaffy.egg-info/top_level.txt
 src/objects/__init__.py
 src/objects/application/__init__.py
 src/objects/application/commands/__init__.py

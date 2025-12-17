@@ -1,7 +1,6 @@
 import pytest
-
-from src.risks.domain.constants.enums.risk import SignalSeverity
-from src.risks.domain.entities.risk_card import (
+from risks.domain.constants.enums.risk import SignalSeverity
+from risks.domain.entities.risk_card import (
     RiskCard,
     RiskDomainError,
     RiskSignal,

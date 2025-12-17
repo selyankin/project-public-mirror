@@ -1,6 +1,5 @@
 import pytest
-
-from src.checks.domain.value_objects.address import (
+from checks.domain.value_objects.address import (
     AddressValidationError,
     normalize_address,
     normalize_address_raw,
@@ -32,9 +31,9 @@ def test_tokens_are_tuple_and_non_empty():
 
 
 def test_normalized_is_lowercase():
-    raw = normalize_address_raw('MiRaNo Avenue')
+    raw = normalize_address_raw('FlAfFy Avenue')
     normalized = normalize_address(raw)
-    assert normalized.normalized == 'mirano avenue'
+    assert normalized.normalized == 'flaffy avenue'
 
 
 def test_address_raw_equality_and_hash():

@@ -1,4 +1,4 @@
-# Mirano Coding Style (for AI assistants)
+# Flaffy Coding Style (for AI assistants)
 
 ## General
 - Prefer DDD + SOLID. Keep boundaries between domain/application/infrastructure/presentation.

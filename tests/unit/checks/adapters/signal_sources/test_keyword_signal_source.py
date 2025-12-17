@@ -1,7 +1,7 @@
-from src.checks.adapters.signal_sources.keyword_signal_source import (
+from checks.adapters.signal_sources.keyword_signal_source import (
     KeywordSignalSource,
 )
-from src.checks.domain.value_objects.address import (
+from checks.domain.value_objects.address import (
     normalize_address,
     normalize_address_raw,
 )

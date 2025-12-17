@@ -1,8 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-
-from src.shared.kernel import db
+from shared.kernel import db
 
 
 @pytest.fixture(autouse=True)

@@ -1,4 +1,4 @@
-from src.checks.domain.helpers.address_heuristics import is_address_like
+from checks.domain.helpers.address_heuristics import is_address_like
 
 
 def test_address_like_with_street_and_number():

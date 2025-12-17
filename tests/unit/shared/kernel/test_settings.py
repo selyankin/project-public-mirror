@@ -1,6 +1,5 @@
 import pytest
-
-from src.shared.kernel.settings import Settings, get_settings
+from shared.kernel.settings import Settings, get_settings
 
 
 @pytest.fixture(autouse=True)
@@ -13,16 +12,16 @@ def _clear_settings_cache():
 @pytest.fixture
 def base_env(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'local')
-    monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/mirano')
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/flaffy')
 
 
 def test_settings_defaults():
     settings = Settings(
         APP_ENV='local',
-        DATABASE_URL='postgresql://localhost/mirano',
+        DATABASE_URL='postgresql://localhost/flaffy',
     )
     assert settings.LOG_LEVEL == 'INFO'
-    assert settings.SERVICE_NAME == 'mirano'
+    assert settings.SERVICE_NAME == 'flaffy'
     assert settings.TIMEZONE == 'Europe/Stockholm'
     assert settings.DEBUG is False
 
@@ -36,7 +35,7 @@ def test_debug_mode(base_env, monkeypatch):
 
     prod_settings = Settings(
         APP_ENV='prod',
-        DATABASE_URL='postgresql://localhost/mirano',
+        DATABASE_URL='postgresql://localhost/flaffy',
     )
     assert prod_settings.DEBUG is False
 

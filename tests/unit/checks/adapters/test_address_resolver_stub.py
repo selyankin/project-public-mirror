@@ -1,5 +1,5 @@
-from src.checks.adapters.address_resolver_stub import AddressResolverStub
-from src.checks.domain.value_objects.address import (
+from checks.adapters.address_resolver_stub import AddressResolverStub
+from checks.domain.value_objects.address import (
     AddressNormalized,
     normalize_address_raw,
 )

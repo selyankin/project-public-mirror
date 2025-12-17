@@ -1,8 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
-from src.checks.domain.entities.check import (
+from checks.domain.entities.check import (
     Check,
     CheckId,
     CheckStatus,

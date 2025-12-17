@@ -1,15 +1,14 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-from src.shared.kernel.bootstrap import create_app
-from src.shared.kernel.settings import get_settings
+from shared.kernel.bootstrap import create_app
+from shared.kernel.settings import get_settings
 
 
 @pytest.fixture(autouse=True)
 def configure_env(monkeypatch):
-    monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/mirano')
-    monkeypatch.setenv('SERVICE_NAME', 'mirano-api')
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/flaffy')
+    monkeypatch.setenv('SERVICE_NAME', 'flaffy-api')
     monkeypatch.setenv('LOG_LEVEL', 'INFO')
     monkeypatch.setenv('DEBUG', 'true')
     monkeypatch.setenv('APP_ENV', 'test')
@@ -21,7 +20,7 @@ def configure_env(monkeypatch):
 def test_create_app_returns_fastapi():
     app = create_app()
     assert isinstance(app, FastAPI)
-    assert app.title == 'mirano-api'
+    assert app.title == 'flaffy-api'
     assert app.debug is True
 
 

@@ -1,8 +1,8 @@
-from src.checks.application.helpers.url_extraction import (
+from checks.application.helpers.url_extraction import (
     extract_address_from_url,
     is_supported_url,
 )
-from src.checks.domain.value_objects.url import UrlRaw
+from checks.domain.value_objects.url import UrlRaw
 
 
 def test_extracts_address_param():

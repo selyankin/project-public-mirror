@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.risks.domain.entities.helpers import (
+from risks.domain.entities.helpers import (
     coerce_risk_level,
     coerce_severity,
     ensure_non_empty_str,
     level_from_score,
 )
-from src.risks.domain.exceptions.risk import RiskDomainError
+from risks.domain.exceptions.risk import RiskDomainError
 
 
 class RiskSignal:

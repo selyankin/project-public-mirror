@@ -1,5 +1,5 @@
-from src.risks.domain.constants.enums.risk import RiskLevel, SignalSeverity
-from src.risks.domain.exceptions.risk import RiskDomainError
+from risks.domain.constants.enums.risk import RiskLevel, SignalSeverity
+from risks.domain.exceptions.risk import RiskDomainError
 
 
 def ensure_non_empty_str(value: object, field: str, max_len: int) -> str:

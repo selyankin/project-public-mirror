@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.checks.domain.value_objects.address import (
+from checks.domain.value_objects.address import (
     AddressNormalized,
     AddressRaw,
     normalize_address,

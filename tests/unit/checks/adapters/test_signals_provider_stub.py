@@ -1,5 +1,5 @@
-from src.checks.adapters.signals_provider_stub import SignalsProviderStub
-from src.checks.domain.value_objects.address import (
+from checks.adapters.signals_provider_stub import SignalsProviderStub
+from checks.domain.value_objects.address import (
     normalize_address,
     normalize_address_raw,
 )

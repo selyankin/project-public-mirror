@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.checks.adapters.signal_sources.keyword_signal_source import (
+from checks.adapters.signal_sources.keyword_signal_source import (
     KeywordSignalSource,
 )
-from src.checks.application.signals_pipeline import SignalsPipeline
-from src.checks.domain.value_objects.address import AddressNormalized
-from src.risks.domain.entities.risk_card import RiskSignal
+from checks.application.signals_pipeline import SignalsPipeline
+from checks.domain.value_objects.address import AddressNormalized
+from risks.domain.entities.risk_card import RiskSignal
 
 
 class SignalsProviderStub:

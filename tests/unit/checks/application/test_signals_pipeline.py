@@ -1,10 +1,10 @@
-from src.checks.application.signals_pipeline import SignalsPipeline
-from src.checks.domain.value_objects.address import (
+from checks.application.signals_pipeline import SignalsPipeline
+from checks.domain.value_objects.address import (
     AddressNormalized,
     normalize_address,
     normalize_address_raw,
 )
-from src.risks.domain.entities.risk_card import RiskSignal
+from risks.domain.entities.risk_card import RiskSignal
 
 
 def _normalized(text: str) -> AddressNormalized:

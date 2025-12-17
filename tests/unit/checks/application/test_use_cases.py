@@ -1,11 +1,10 @@
 import pytest
-
-from src.checks.adapters.address_resolver_stub import AddressResolverStub
-from src.checks.adapters.signals_provider_stub import SignalsProviderStub
-from src.checks.application.use_cases.check_address import (
+from checks.adapters.address_resolver_stub import AddressResolverStub
+from checks.adapters.signals_provider_stub import SignalsProviderStub
+from checks.application.use_cases.check_address import (
     CheckAddressUseCase,
 )
-from src.checks.domain.value_objects.query import CheckQuery, QueryInputError
+from checks.domain.value_objects.query import CheckQuery, QueryInputError
 
 
 def make_use_case():

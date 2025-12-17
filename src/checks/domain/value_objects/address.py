@@ -1,7 +1,7 @@
 """Value objects for address data in the Check domain."""
 
-from src.checks.domain.constants.address import COMMA_RE, WHITESPACE_RE
-from src.checks.domain.exceptions.address import AddressValidationError
+from checks.domain.constants.address import COMMA_RE, WHITESPACE_RE
+from checks.domain.exceptions.address import AddressValidationError
 
 
 class AddressRaw:

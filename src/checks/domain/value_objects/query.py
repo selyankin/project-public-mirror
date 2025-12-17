@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from checks.domain.constants.enums.domain import QueryType
 from checks.domain.exceptions.domain import QueryInputError
-
-from src.checks.domain.constants.enums.domain import QueryType
 
 
 class CheckQuery:

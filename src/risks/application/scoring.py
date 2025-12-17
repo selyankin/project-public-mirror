@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.risks.domain.entities.risk_card import (
+from risks.domain.entities.risk_card import (
     RiskCard,
     RiskSignal,
     level_from_score,

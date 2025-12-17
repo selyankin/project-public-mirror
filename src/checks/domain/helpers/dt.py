@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from src.checks.domain.exceptions.domain import DomainValidationError
+from checks.domain.exceptions.domain import DomainValidationError
 
 
 def utcnow() -> datetime:

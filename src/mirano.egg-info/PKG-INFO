@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
-Name: mirano
+Name: flaffy
 Version: 0.1.0
-Summary: Mirano — real estate risk assessment platform
+Summary: Flaffy — real estate risk assessment platform
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: fastapi>=0.110

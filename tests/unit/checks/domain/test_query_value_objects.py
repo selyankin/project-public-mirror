@@ -1,7 +1,6 @@
 import pytest
-
-from src.checks.domain.constants.enums.domain import QueryType
-from src.checks.domain.value_objects.query import CheckQuery, QueryInputError
+from checks.domain.constants.enums.domain import QueryType
+from checks.domain.value_objects.query import CheckQuery, QueryInputError
 
 
 def test_valid_address_query():

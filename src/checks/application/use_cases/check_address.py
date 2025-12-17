@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.checks.application.helpers.url_extraction import (
+from checks.application.helpers.url_extraction import (
     extract_address_from_url,
 )
-from src.checks.application.ports.checks import (
+from checks.application.ports.checks import (
     AddressResolverPort,
     SignalsProviderPort,
 )
-from src.checks.domain.constants.enums.domain import QueryType
-from src.checks.domain.helpers.address_heuristics import is_address_like
-from src.checks.domain.value_objects.address import normalize_address_raw
-from src.checks.domain.value_objects.query import CheckQuery
-from src.checks.domain.value_objects.url import UrlRaw
-from src.risks.application.scoring import build_risk_card
-from src.risks.domain.entities.risk_card import RiskSignal
-from src.risks.domain.helpers.signals import get_signal_definition
+from checks.domain.constants.enums.domain import QueryType
+from checks.domain.helpers.address_heuristics import is_address_like
+from checks.domain.value_objects.address import normalize_address_raw
+from checks.domain.value_objects.query import CheckQuery
+from checks.domain.value_objects.url import UrlRaw
+from risks.application.scoring import build_risk_card
+from risks.domain.entities.risk_card import RiskSignal
+from risks.domain.signals_catalog import get_signal_definition
 
 
 class CheckAddressUseCase:

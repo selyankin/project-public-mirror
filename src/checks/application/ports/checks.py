@@ -2,11 +2,11 @@
 
 from typing import Protocol
 
-from src.checks.domain.value_objects.address import (
+from checks.domain.value_objects.address import (
     AddressNormalized,
     AddressRaw,
 )
-from src.risks.domain.entities.risk_card import RiskSignal
+from risks.domain.entities.risk_card import RiskSignal
 
 
 class AddressResolverPort(Protocol):

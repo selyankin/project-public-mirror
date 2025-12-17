@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
+from checks.adapters.address_resolver_stub import AddressResolverStub
+from checks.adapters.signals_provider_stub import SignalsProviderStub
+from checks.application.use_cases.check_address import CheckAddressUseCase
+from checks.domain.value_objects.address import AddressValidationError
+from checks.domain.value_objects.query import CheckQuery, QueryInputError
 from checks.presentation.api.v1.serialization.input.checks import (
     CheckIn,
     LegacyCheckIn,
 )
 from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
 from fastapi import APIRouter, HTTPException
-
-from src.checks.adapters.address_resolver_stub import AddressResolverStub
-from src.checks.adapters.signals_provider_stub import SignalsProviderStub
-from src.checks.application.use_cases.check_address import CheckAddressUseCase
-from src.checks.domain.value_objects.address import AddressValidationError
-from src.checks.domain.value_objects.query import CheckQuery, QueryInputError
 
 router = APIRouter()
 

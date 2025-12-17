@@ -1,6 +1,5 @@
 import pytest
-
-from src.checks.domain.value_objects.url import UrlRaw
+from checks.domain.value_objects.url import UrlRaw
 
 
 def test_valid_https_url():

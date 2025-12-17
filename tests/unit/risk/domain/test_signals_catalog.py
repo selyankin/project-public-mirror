@@ -1,7 +1,6 @@
 import pytest
-
-from src.risks.domain.constants.enums.risk import SignalSeverity
-from src.risks.domain.helpers.signals import (
+from risks.domain.constants.enums.risk import SignalSeverity
+from risks.domain.signals_catalog import (
     all_signal_definitions,
     get_signal_definition,
 )
