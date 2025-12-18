@@ -11,8 +11,8 @@ from reports.domain.entities.report import Report
 class ReportsRepoPort(Protocol):
     """Репозиторий доменных отчётов."""
 
-    def save(self, report: Report) -> UUID:
+    async def save(self, report: Report) -> UUID:
         """Сохранить отчёт."""
 
-    def get(self, report_id: UUID) -> Report | None:
+    async def get(self, report_id: UUID) -> Report | None:
         """Вернуть отчёт или None."""

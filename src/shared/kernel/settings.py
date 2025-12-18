@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 EnvName = Literal['local', 'dev', 'test', 'staging', 'prod']
 LogLevel = Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+StorageMode = Literal['memory', 'db']
 
 
 class Settings(BaseSettings):
@@ -27,7 +28,11 @@ class Settings(BaseSettings):
     )
 
     APP_ENV: EnvName = 'local'
-    DATABASE_URL: str
+    DATABASE_URL: str = 'postgresql+asyncpg://localhost:5432/flaffy'
+    DB_DSN: str = 'postgresql+asyncpg://test:test@localhost:5432/flaffy_test'
+    DB_ECHO: bool = False
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
     LOG_LEVEL: LogLevel = 'INFO'
     SERVICE_NAME: str = 'flaffy'
     DEBUG: bool = False
@@ -38,6 +43,7 @@ class Settings(BaseSettings):
     FIAS_TIMEOUT_SECONDS: float = 5.0
     CHECK_CACHE_TTL_SECONDS: int = 600
     CHECK_CACHE_VERSION: str = 'v1'
+    STORAGE_MODE: StorageMode = 'db'
 
     @property
     def is_prod(self) -> bool:
@@ -68,6 +74,16 @@ class Settings(BaseSettings):
                 '"postgresql://", "postgresql+psycopg://", '
                 '"postgresql+asyncpg://".',
             )
+        return value
+
+    @field_validator('DB_DSN')
+    @classmethod
+    def validate_db_dsn(cls, value: str) -> str:
+        """Убедиться, что DSN указан."""
+
+        if not value:
+            raise ValueError('DB_DSN must be provided.')
+
         return value
 
     @model_validator(mode='after')

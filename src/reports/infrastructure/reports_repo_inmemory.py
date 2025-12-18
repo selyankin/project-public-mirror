@@ -18,13 +18,13 @@ class InMemoryReportsRepo:
 
         self._storage: dict[UUID, Report] = {}
 
-    def save(self, report: Report) -> UUID:
+    async def save(self, report: Report) -> UUID:
         """Сохранить отчёт и вернуть его ID."""
 
         self._storage[report.id] = report
         return report.id
 
-    def get(self, report_id: UUID) -> Report | None:
+    async def get(self, report_id: UUID) -> Report | None:
         """Получить отчёт по идентификатору."""
 
         return self._storage.get(report_id)

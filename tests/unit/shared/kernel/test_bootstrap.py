@@ -9,6 +9,10 @@ from shared.kernel.settings import get_settings
 @pytest.fixture(autouse=True)
 def configure_env(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/flaffy')
+    monkeypatch.setenv(
+        'DB_DSN',
+        'postgresql+asyncpg://postgres:postgres@localhost:5432/flaffy',
+    )
     monkeypatch.setenv('SERVICE_NAME', 'flaffy-api')
     monkeypatch.setenv('LOG_LEVEL', 'INFO')
     monkeypatch.setenv('DEBUG', 'true')
@@ -31,3 +35,6 @@ def test_health_endpoint_returns_ok():
     response = client.get('/health')
     assert response.status_code == 200
     assert response.json() == {'status': 'ok'}
+
+
+# TODO: cover /health/db when test database connectivity is available.

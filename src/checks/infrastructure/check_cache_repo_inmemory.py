@@ -26,10 +26,10 @@ class InMemoryCheckCacheRepo:
         self._now_fn = now_fn or (lambda: datetime.now(UTC))
         self._storage: dict[str, CachedCheckEntry] = {}
 
-    def get(self, key: str) -> CachedCheckEntry | None:
+    async def get(self, key: str) -> CachedCheckEntry | None:
         """Вернуть запись по ключу, если она не протухла."""
 
-        self.cleanup()
+        await self.cleanup()
         entry = self._storage.get(key)
         if not entry:
             return None
@@ -40,10 +40,10 @@ class InMemoryCheckCacheRepo:
 
         return entry
 
-    def set(self, key: str, check_id: UUID) -> None:
+    async def set(self, key: str, check_id: UUID) -> None:
         """Сохранить запись кэша."""
 
-        self.cleanup()
+        await self.cleanup()
         created = self._now_fn()
         entry = CachedCheckEntry(
             check_id=check_id,
@@ -52,7 +52,7 @@ class InMemoryCheckCacheRepo:
         )
         self._storage[key] = entry
 
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Удалить протухшие записи."""
 
         now = self._now_fn()

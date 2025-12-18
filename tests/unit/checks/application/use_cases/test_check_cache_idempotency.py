@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from checks.application.use_cases.address_risk_check import (
     AddressRiskCheckResult,
 )
@@ -20,6 +22,8 @@ from checks.infrastructure.check_results_repo_inmemory import (
     InMemoryCheckResultsRepo,
 )
 from risks.application.scoring import build_risk_card
+
+pytestmark = pytest.mark.asyncio
 
 
 class DummyClock:
@@ -56,7 +60,7 @@ class FakeAddressRiskCheckUseCase:
         return self._result
 
 
-def test_idempotent_behavior_returns_same_check_id() -> None:
+async def test_idempotent_behavior_returns_same_check_id() -> None:
     """Повторный запрос в пределах TTL не вызывает риск-движок."""
 
     clock = DummyClock()
@@ -70,14 +74,14 @@ def test_idempotent_behavior_returns_same_check_id() -> None:
     )
 
     query = CheckQuery({'type': 'address', 'query': 'ул мира 7'})
-    first = use_case.execute_query(query)
-    second = use_case.execute_query(query)
+    first = await use_case.execute_query(query)
+    second = await use_case.execute_query(query)
 
     assert fake_risk.calls == 1
     assert first['check_id'] == second['check_id']
 
 
-def test_cache_expires_after_ttl() -> None:
+async def test_cache_expires_after_ttl() -> None:
     """После истечения TTL проверка выполняется повторно."""
 
     clock = DummyClock()
@@ -91,9 +95,9 @@ def test_cache_expires_after_ttl() -> None:
     )
 
     query = CheckQuery({'type': 'address', 'query': 'ул мира 7'})
-    first = use_case.execute_query(query)
+    first = await use_case.execute_query(query)
     clock.advance(2)
-    second = use_case.execute_query(query)
+    second = await use_case.execute_query(query)
 
     assert fake_risk.calls == 2
     assert first['check_id'] != second['check_id']

@@ -25,7 +25,7 @@ class DummyClock:
         return self.value
 
 
-def test_cache_entry_expires_after_ttl() -> None:
+async def test_cache_entry_expires_after_ttl() -> None:
     """Запись пропадает после истечения TTL."""
 
     clock = DummyClock()
@@ -33,8 +33,8 @@ def test_cache_entry_expires_after_ttl() -> None:
     key = 'foo'
     check_id = uuid4()
 
-    repo.set(key, check_id)
-    assert repo.get(key) is not None
+    await repo.set(key, check_id)
+    assert await repo.get(key) is not None
 
     clock.advance(2)
-    assert repo.get(key) is None
+    assert await repo.get(key) is None

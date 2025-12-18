@@ -31,21 +31,21 @@ class SignalsProviderPort(Protocol):
 class CheckResultsRepoPort(Protocol):
     """Порт для сохранения и чтения результатов проверок."""
 
-    def save(self, result: CheckResultSnapshot) -> UUID:
+    async def save(self, result: CheckResultSnapshot) -> UUID:
         """Сохранить результат и вернуть идентификатор."""
 
-    def get(self, check_id: UUID) -> CheckResultSnapshot | None:
+    async def get(self, check_id: UUID) -> CheckResultSnapshot | None:
         """Получить сохранённый результат."""
 
 
 class CheckCacheRepoPort(Protocol):
     """Порт кэша результатов проверок."""
 
-    def get(self, key: str) -> CachedCheckEntry | None:
+    async def get(self, key: str) -> CachedCheckEntry | None:
         """Вернуть кэшированную запись."""
 
-    def set(self, key: str, check_id: UUID) -> None:
+    async def set(self, key: str, check_id: UUID) -> None:
         """Сохранить запись для указанного ключа."""
 
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Удалить протухшие записи."""

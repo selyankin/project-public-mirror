@@ -18,14 +18,14 @@ class InMemoryCheckResultsRepo:
 
         self._storage: dict[UUID, CheckResultSnapshot] = {}
 
-    def save(self, result: CheckResultSnapshot) -> UUID:
+    async def save(self, result: CheckResultSnapshot) -> UUID:
         """Сохранить результат и вернуть присвоенный идентификатор."""
 
         check_id = uuid4()
         self._storage[check_id] = result
         return check_id
 
-    def get(self, check_id: UUID) -> CheckResultSnapshot | None:
+    async def get(self, check_id: UUID) -> CheckResultSnapshot | None:
         """Получить сохранённый результат по идентификатору."""
 
         return self._storage.get(check_id)

@@ -60,10 +60,10 @@ class CheckAddressUseCase:
         self._fias_mode = fias_mode
         self._cache_version = cache_version
 
-    def execute(self, raw_query: str) -> dict[str, Any]:
+    async def execute(self, raw_query: str) -> dict[str, Any]:
         """Выполнить проверку по строке адреса (устаревший формат)."""
 
-        return self.execute_query(
+        return await self.execute_query(
             CheckQuery(
                 {
                     'type': QueryType.address.value,
@@ -72,7 +72,7 @@ class CheckAddressUseCase:
             ),
         )
 
-    def execute_query(self, query: CheckQuery) -> dict[str, Any]:
+    async def execute_query(self, query: CheckQuery) -> dict[str, Any]:
         """Выполнить проверку для типизированного запроса."""
 
         snapshot: CheckResultSnapshot | None = None
@@ -80,12 +80,22 @@ class CheckAddressUseCase:
         check_id: UUID | None = None
 
         if query.type is QueryType.address:
-            snapshot, check_id, risk_result, signals = self._process_address(
+            (
+                snapshot,
+                check_id,
+                risk_result,
+                signals,
+            ) = await self._process_address(
                 query.query,
             )
 
         elif query.type is QueryType.url:
-            snapshot, check_id, risk_result, signals = self._process_url(
+            (
+                snapshot,
+                check_id,
+                risk_result,
+                signals,
+            ) = await self._process_url(
                 query.query,
             )
 
@@ -109,7 +119,7 @@ class CheckAddressUseCase:
 
         return self._build_response(risk_card, normalized_address, check_id)
 
-    def _process_address(self, text: str) -> tuple[
+    async def _process_address(self, text: str) -> tuple[
         CheckResultSnapshot | None,
         UUID | None,
         AddressRiskCheckResult | None,
@@ -131,19 +141,20 @@ class CheckAddressUseCase:
             input_kind='address',
             input_value=normalized_input,
         )
-        cached = self._get_cached_snapshot(cache_key)
+        cached = await self._get_cached_snapshot(cache_key)
         if cached:
             return cached[0], cached[1], None, ()
 
         risk_result, signals = self._run_address_risk_check(text)
-        snapshot, check_id = self._store_check_result(
+        snapshot, check_id = await self._store_check_result(
             normalized_input,
             risk_result,
+            kind='address',
         )
-        self._check_cache_repo.set(cache_key, check_id)
+        await self._check_cache_repo.set(cache_key, check_id)
         return snapshot, check_id, risk_result, signals
 
-    def _process_url(self, url_text: str) -> tuple[
+    async def _process_url(self, url_text: str) -> tuple[
         CheckResultSnapshot | None,
         UUID | None,
         AddressRiskCheckResult | None,
@@ -156,7 +167,7 @@ class CheckAddressUseCase:
             input_kind='url',
             input_value=normalized_input,
         )
-        cached = self._get_cached_snapshot(cache_key)
+        cached = await self._get_cached_snapshot(cache_key)
         if cached:
             return cached[0], cached[1], None, ()
 
@@ -165,11 +176,12 @@ class CheckAddressUseCase:
         if extracted and is_address_like(extracted):
             normalized_address_input = normalize_address_raw(extracted).value
             risk_result, signals = self._run_address_risk_check(extracted)
-            snapshot, check_id = self._store_check_result(
+            snapshot, check_id = await self._store_check_result(
                 normalized_address_input,
                 risk_result,
+                kind='url',
             )
-            self._check_cache_repo.set(cache_key, check_id)
+            await self._check_cache_repo.set(cache_key, check_id)
             return snapshot, check_id, risk_result, signals
 
         signals = (
@@ -195,16 +207,16 @@ class CheckAddressUseCase:
             version=self._cache_version,
         )
 
-    def _get_cached_snapshot(
+    async def _get_cached_snapshot(
         self,
         cache_key: str,
     ) -> tuple[CheckResultSnapshot, UUID] | None:
         """Проверить кэш и вернуть снапшот."""
 
-        entry = self._check_cache_repo.get(cache_key)
+        entry = await self._check_cache_repo.get(cache_key)
         if not entry:
             return None
-        snapshot = self._check_results_repo.get(entry.check_id)
+        snapshot = await self._check_results_repo.get(entry.check_id)
         if snapshot is None:
             return None
         return snapshot, entry.check_id
@@ -237,10 +249,12 @@ class CheckAddressUseCase:
         result = self._address_risk_check_use_case.execute(normalized_raw)
         return result, tuple(result.signals)
 
-    def _store_check_result(
+    async def _store_check_result(
         self,
         raw_input: str,
         result: AddressRiskCheckResult,
+        *,
+        kind: str,
     ) -> tuple[CheckResultSnapshot, UUID]:
         """Сохранить результирующий снимок проверки."""
 
@@ -250,8 +264,9 @@ class CheckAddressUseCase:
             signals=list(result.signals),
             risk_card=result.risk_card,
             created_at=datetime.now(UTC),
+            kind=kind,
         )
-        check_id = self._check_results_repo.save(snapshot)
+        check_id = await self._check_results_repo.save(snapshot)
         return snapshot, check_id
 
     @staticmethod

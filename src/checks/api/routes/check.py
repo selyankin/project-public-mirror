@@ -45,7 +45,7 @@ def _build_use_case() -> CheckAddressUseCase:
 
 
 @router.post('/check', response_model=RiskCardOut)
-def check(payload: CheckIn) -> RiskCardOut:
+async def check(payload: CheckIn) -> RiskCardOut:
     """Выполнить проверку по унифицированному запросу."""
 
     use_case = _build_use_case()
@@ -56,7 +56,7 @@ def check(payload: CheckIn) -> RiskCardOut:
                 'query': payload.query,
             }
         )
-        result = use_case.execute_query(query)
+        result = await use_case.execute_query(query)
 
     except (QueryInputError, AddressValidationError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -65,12 +65,12 @@ def check(payload: CheckIn) -> RiskCardOut:
 
 
 @router.post('/check/address', response_model=RiskCardOut)
-def check_address(payload: LegacyCheckIn) -> RiskCardOut:
+async def check_address(payload: LegacyCheckIn) -> RiskCardOut:
     """Выполнить проверку по устаревшему адресу."""
 
     use_case = _build_use_case()
     try:
-        result = use_case.execute(payload.address)
+        result = await use_case.execute(payload.address)
 
     except AddressValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

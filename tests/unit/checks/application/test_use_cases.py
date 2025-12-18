@@ -25,6 +25,8 @@ from checks.infrastructure.check_results_repo_inmemory import (
 )
 from risks.application.scoring import build_risk_card
 
+pytestmark = pytest.mark.asyncio
+
 
 def make_use_case():
     address_resolver = AddressResolverStub({})
@@ -44,9 +46,9 @@ def make_use_case():
     )
 
 
-def test_execute_returns_risk_card_dict():
+async def test_execute_returns_risk_card_dict():
     use_case = make_use_case()
-    result = use_case.execute('ул мира 7')
+    result = await use_case.execute('ул мира 7')
     assert isinstance(result, dict)
     assert {'score', 'level', 'signals', 'check_id'} <= result.keys()
     assert result['address_source'] == 'stub'
@@ -60,58 +62,58 @@ def test_execute_returns_risk_card_dict():
     assert result['check_id'] is not None
 
 
-def test_execute_detects_apartments_signal():
+async def test_execute_detects_apartments_signal():
     use_case = make_use_case()
-    result = use_case.execute('ул мира 7 апарт')
+    result = await use_case.execute('ул мира 7 апарт')
     assert any(
         sig['code'] == 'possible_apartments' for sig in result['signals']
     )
 
 
-def test_execute_raises_query_error_for_empty_string():
+async def test_execute_raises_query_error_for_empty_string():
     use_case = make_use_case()
     with pytest.raises(QueryInputError):
-        use_case.execute('   ')
+        await use_case.execute('   ')
 
 
-def test_execute_query_address_path():
+async def test_execute_query_address_path():
     use_case = make_use_case()
     query = CheckQuery({'type': 'address', 'query': 'ул мира 7'})
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert 'level' in result
 
 
-def test_address_query_not_address_like_returns_signal():
+async def test_address_query_not_address_like_returns_signal():
     use_case = make_use_case()
     query = CheckQuery({'type': 'address', 'query': 'привет как дела'})
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert any(
         sig['code'] == 'query_not_address_like' for sig in result['signals']
     )
 
 
-def test_address_query_keyword_only_passes():
+async def test_address_query_keyword_only_passes():
     use_case = make_use_case()
     query = CheckQuery({'type': 'address', 'query': 'улица ленина'})
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert all(
         sig['code'] != 'query_not_address_like' for sig in result['signals']
     )
 
 
-def test_execute_query_url_with_address():
+async def test_execute_query_url_with_address():
     use_case = make_use_case()
     query = CheckQuery(
         {'type': 'url', 'query': 'https://x.test/?address=ул+мира+7'}
     )
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert all(
         sig['code'] != 'url_not_supported_yet' for sig in result['signals']
     )
     assert result['check_id'] is not None
 
 
-def test_execute_query_url_with_non_address_text():
+async def test_execute_query_url_with_non_address_text():
     use_case = make_use_case()
     query = CheckQuery(
         {
@@ -119,22 +121,22 @@ def test_execute_query_url_with_non_address_text():
             'query': 'https://x.test/?address=привет+как+дела',
         }
     )
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert any(
         sig['code'] == 'url_not_supported_yet' for sig in result['signals']
     )
 
 
-def test_execute_query_url_without_address():
+async def test_execute_query_url_without_address():
     use_case = make_use_case()
     query = CheckQuery({'type': 'url', 'query': 'https://x.test/'})
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert any(
         sig['code'] == 'url_not_supported_yet' for sig in result['signals']
     )
 
 
-def test_address_path_uses_address_risk_use_case():
+async def test_address_path_uses_address_risk_use_case():
     normalized = normalize_address(normalize_address_raw('ул мира 7'))
 
     class FakeAddressRiskCheckUseCase:
@@ -156,21 +158,21 @@ def test_address_path_uses_address_risk_use_case():
         def __init__(self):
             self.saved_snapshot = None
 
-        def save(self, snapshot):
+        async def save(self, snapshot):
             self.saved_snapshot = snapshot
             return uuid4()
 
-        def get(self, check_id):
+        async def get(self, check_id):
             return None
 
     class DummyCacheRepo:
-        def get(self, key):
+        async def get(self, key):
             return None
 
-        def set(self, key, check_id):
+        async def set(self, key, check_id):
             return None
 
-        def cleanup(self):
+        async def cleanup(self):
             return None
 
     use_case = CheckAddressUseCase(
@@ -181,7 +183,7 @@ def test_address_path_uses_address_risk_use_case():
         cache_version='test',
     )
     query = CheckQuery({'type': 'address', 'query': 'ул мира 7'})
-    result = use_case.execute_query(query)
+    result = await use_case.execute_query(query)
     assert result['score'] == 0
     assert fake.called_with is not None
     assert isinstance(fake.called_with, AddressRaw)

@@ -8,10 +8,15 @@ from shared.kernel.settings import get_settings
 @pytest.fixture(autouse=True)
 def configure_env(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/flaffy')
+    monkeypatch.setenv(
+        'DB_DSN',
+        'postgresql+asyncpg://postgres:postgres@localhost:5432/flaffy',
+    )
     monkeypatch.setenv('SERVICE_NAME', 'flaffy-api')
     monkeypatch.setenv('APP_ENV', 'test')
     monkeypatch.setenv('LOG_LEVEL', 'INFO')
     monkeypatch.setenv('DEBUG', 'false')
+    monkeypatch.setenv('STORAGE_MODE', 'memory')
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

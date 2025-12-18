@@ -22,8 +22,12 @@ from reports.infrastructure.reports_repo_inmemory import (
 )
 from risks.application.scoring import build_risk_card
 
+pytestmark = pytest.mark.asyncio
 
-def _snapshot(raw: str = 'ул мира 7') -> tuple[InMemoryCheckResultsRepo, UUID]:
+
+async def _snapshot(
+    raw: str = 'ул мира 7',
+) -> tuple[InMemoryCheckResultsRepo, UUID]:
     repo = InMemoryCheckResultsRepo()
     normalized = normalize_address(normalize_address_raw(raw))
     snapshot = CheckResultSnapshot(
@@ -33,11 +37,11 @@ def _snapshot(raw: str = 'ул мира 7') -> tuple[InMemoryCheckResultsRepo, U
         risk_card=build_risk_card(()),
         created_at=datetime.now(UTC),
     )
-    check_id = repo.save(snapshot)
+    check_id = await repo.save(snapshot)
     return repo, check_id
 
 
-def test_create_report_not_found_check() -> None:
+async def test_create_report_not_found_check() -> None:
     """Если check_id неизвестен, бросаем ошибку."""
 
     repo = InMemoryCheckResultsRepo()
@@ -49,13 +53,13 @@ def test_create_report_not_found_check() -> None:
     )
 
     with pytest.raises(CheckResultNotFoundError):
-        use_case.execute(UUID(int=0), [])
+        await use_case.execute(UUID(int=0), [])
 
 
-def test_create_report_success() -> None:
+async def test_create_report_success() -> None:
     """Отчёт создаётся и содержит ссылки на исходные данные."""
 
-    repo, check_id = _snapshot()
+    repo, check_id = await _snapshot()
     reports_repo = InMemoryReportsRepo()
     use_case = CreateReportUseCase(
         check_results_repo=repo,
@@ -63,8 +67,8 @@ def test_create_report_success() -> None:
         payments_service=PaymentsServiceStub(),
     )
 
-    report = use_case.execute(check_id, ['base'])
-    snapshot = repo.get(check_id)
+    report = await use_case.execute(check_id, ['base'])
+    snapshot = await repo.get(check_id)
     assert snapshot is not None
 
     assert isinstance(report, Report)

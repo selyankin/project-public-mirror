@@ -31,7 +31,7 @@ payments_service = PaymentsServiceStub()
 
 
 @router.post('/reports', response_model=CreateReportOut)
-def create_report(payload: CreateReportIn) -> CreateReportOut:
+async def create_report(payload: CreateReportIn) -> CreateReportOut:
     """Создать отчёт по ранее выполненной проверке."""
 
     use_case = CreateReportUseCase(
@@ -40,7 +40,7 @@ def create_report(payload: CreateReportIn) -> CreateReportOut:
         payments_service=payments_service,
     )
     try:
-        report = use_case.execute(payload.check_id, payload.modules)
+        report = await use_case.execute(payload.check_id, payload.modules)
     except CheckResultNotFoundError as exc:
         raise HTTPException(status_code=404, detail='check not found') from exc
 
@@ -48,12 +48,12 @@ def create_report(payload: CreateReportIn) -> CreateReportOut:
 
 
 @router.get('/reports/{report_id}', response_model=ReportOut)
-def get_report(report_id: UUID) -> ReportOut:
+async def get_report(report_id: UUID) -> ReportOut:
     """Вернуть ранее сгенерированный отчёт."""
 
     use_case = GetReportUseCase(reports_repo=reports_repo)
     try:
-        report = use_case.execute(report_id)
+        report = await use_case.execute(report_id)
     except ReportNotFoundError as exc:
         raise HTTPException(status_code=404, detail='report not found') from exc
 

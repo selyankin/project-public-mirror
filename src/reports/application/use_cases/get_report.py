@@ -19,10 +19,10 @@ class GetReportUseCase:
 
         self._reports_repo = reports_repo
 
-    def execute(self, report_id: UUID) -> Report:
+    async def execute(self, report_id: UUID) -> Report:
         """Вернуть отчёт или возбуждать ошибку, если он не найден."""
 
-        report = self._reports_repo.get(report_id)
+        report = await self._reports_repo.get(report_id)
         if report is None:
             raise ReportNotFoundError(str(report_id))
         return report

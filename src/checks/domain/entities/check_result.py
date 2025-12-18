@@ -18,3 +18,5 @@ class CheckResultSnapshot:
     signals: list[RiskSignal]
     risk_card: RiskCard
     created_at: datetime
+    kind: str = 'address'
+    schema_version: int = 1

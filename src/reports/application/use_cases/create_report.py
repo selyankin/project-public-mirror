@@ -48,10 +48,10 @@ class CreateReportUseCase:
         self._reports_repo = reports_repo
         self._payments_service = payments_service
 
-    def execute(self, check_id: UUID, modules: list[str]) -> Report:
+    async def execute(self, check_id: UUID, modules: list[str]) -> Report:
         """Создать отчёт по сохранённому результату проверки."""
 
-        snapshot = self._check_results_repo.get(check_id)
+        snapshot = await self._check_results_repo.get(check_id)
         if snapshot is None:
             raise CheckResultNotFoundError(str(check_id))
 
@@ -67,7 +67,7 @@ class CreateReportUseCase:
             modules=list(modules_list),
             payload=payload,
         )
-        self._reports_repo.save(report)
+        await self._reports_repo.save(report)
         return report
 
     @staticmethod
