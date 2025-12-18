@@ -17,6 +17,9 @@ from checks.domain.value_objects.address import (
     normalize_address_raw,
 )
 from checks.domain.value_objects.query import CheckQuery, QueryInputError
+from checks.infrastructure.check_cache_repo_inmemory import (
+    InMemoryCheckCacheRepo,
+)
 from checks.infrastructure.check_results_repo_inmemory import (
     InMemoryCheckResultsRepo,
 )
@@ -31,9 +34,13 @@ def make_use_case():
         signals_provider=signals_provider,
     )
     check_results_repo = InMemoryCheckResultsRepo()
+    check_cache_repo = InMemoryCheckCacheRepo(ttl_seconds=600)
     return CheckAddressUseCase(
         address_risk_check_use_case=address_risk_use_case,
         check_results_repo=check_results_repo,
+        check_cache_repo=check_cache_repo,
+        fias_mode='stub',
+        cache_version='test',
     )
 
 
@@ -156,9 +163,22 @@ def test_address_path_uses_address_risk_use_case():
         def get(self, check_id):
             return None
 
+    class DummyCacheRepo:
+        def get(self, key):
+            return None
+
+        def set(self, key, check_id):
+            return None
+
+        def cleanup(self):
+            return None
+
     use_case = CheckAddressUseCase(
         address_risk_check_use_case=fake,
         check_results_repo=DummyRepo(),
+        check_cache_repo=DummyCacheRepo(),
+        fias_mode='stub',
+        cache_version='test',
     )
     query = CheckQuery({'type': 'address', 'query': 'ул мира 7'})
     result = use_case.execute_query(query)

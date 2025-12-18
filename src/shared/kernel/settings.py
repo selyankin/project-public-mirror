@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     FIAS_BASE_URL: str | None = None
     FIAS_TOKEN: str | None = None
     FIAS_TIMEOUT_SECONDS: float = 5.0
+    CHECK_CACHE_TTL_SECONDS: int = 600
+    CHECK_CACHE_VERSION: str = 'v1'
 
     @property
     def is_prod(self) -> bool:

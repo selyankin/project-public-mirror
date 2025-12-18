@@ -19,7 +19,7 @@ from checks.presentation.api.v1.serialization.input.checks import (
     LegacyCheckIn,
 )
 from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
-from shared.kernel.repositories import check_results_repo
+from shared.kernel.repositories import check_cache_repo, check_results_repo
 from shared.kernel.settings import get_settings
 
 router = APIRouter()
@@ -38,6 +38,9 @@ def _build_use_case() -> CheckAddressUseCase:
     return CheckAddressUseCase(
         address_risk_check_use_case=address_risk_use_case,
         check_results_repo=check_results_repo,
+        check_cache_repo=check_cache_repo,
+        fias_mode=settings.FIAS_MODE,
+        cache_version=settings.CHECK_CACHE_VERSION,
     )
 
 
