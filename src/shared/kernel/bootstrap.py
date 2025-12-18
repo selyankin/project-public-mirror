@@ -3,12 +3,14 @@
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import APIRouter, FastAPI, HTTPException
 from sqlalchemy import text
 
 from checks.api.routes.check import router as check_router
 from reports.api.routes import router as reports_router
 from shared.kernel.db import create_engine, create_sessionmaker, session_scope
+from shared.kernel.fias_client_factory import get_fias_client
 from shared.kernel.logging import get_logger, setup_logging
 from shared.kernel.repositories import configure_repositories
 from shared.kernel.settings import get_settings
@@ -56,12 +58,21 @@ ROUTER_FACTORIES = (
 
 def create_app() -> FastAPI:
     """Create and configure a FastAPI application instance."""
+
     setup_logging()
     settings = get_settings()
     logger = get_logger()
     engine = create_engine(settings)
     session_factory = create_sessionmaker(engine)
     configure_repositories(session_factory)
+    fias_http_client: httpx.AsyncClient | None = None
+
+    if settings.FIAS_MODE == 'api' and settings.FIAS_BASE_URL:
+        fias_http_client = httpx.AsyncClient(
+            base_url=settings.FIAS_BASE_URL.rstrip('/'),
+        )
+
+    fias_client = get_fias_client(settings, fias_http_client)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -73,6 +84,8 @@ def create_app() -> FastAPI:
         try:
             yield
         finally:
+            if fias_http_client is not None:
+                await fias_http_client.aclose()
             await engine.dispose()
             logger.info('app_shutdown')
 
@@ -83,6 +96,8 @@ def create_app() -> FastAPI:
     )
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
+    app.state.fias_client = fias_client
+    app.state.fias_http_client = fias_http_client
 
     app.include_router(_health_router(session_factory))
 

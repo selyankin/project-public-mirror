@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from checks.adapters.signals_provider_stub import SignalsProviderStub
 from checks.application.use_cases.address_risk_check import (
@@ -25,11 +28,16 @@ from shared.kernel.settings import get_settings
 router = APIRouter()
 
 
-def _build_use_case() -> CheckAddressUseCase:
+def _build_use_case(request: Request) -> CheckAddressUseCase:
     """Создать use-case с тестовыми адаптерами."""
     settings = get_settings()
     address_resolver = build_address_resolver(settings)
     signals_provider = SignalsProviderStub({})
+    fias_client = getattr(request.app.state, 'fias_client', None)
+
+    if fias_client is None:
+        raise RuntimeError('FIAS client is not configured.')
+
     address_risk_use_case = AddressRiskCheckUseCase(
         address_resolver=address_resolver,
         signals_provider=signals_provider,
@@ -39,16 +47,27 @@ def _build_use_case() -> CheckAddressUseCase:
         address_risk_check_use_case=address_risk_use_case,
         check_results_repo=check_results_repo,
         check_cache_repo=check_cache_repo,
+        fias_client=fias_client,
         fias_mode=settings.FIAS_MODE,
         cache_version=settings.CHECK_CACHE_VERSION,
     )
 
 
+def _encode_response(payload: dict[str, Any]) -> JSONResponse:
+    """Валидировать и сериализовать ответ без лишних полей."""
+
+    response = RiskCardOut(**payload)
+    data = response.model_dump(mode='json')
+    if data.get('fias') is None:
+        data.pop('fias', None)
+    return JSONResponse(content=data)
+
+
 @router.post('/check', response_model=RiskCardOut)
-async def check(payload: CheckIn) -> RiskCardOut:
+async def check(payload: CheckIn, request: Request) -> JSONResponse:
     """Выполнить проверку по унифицированному запросу."""
 
-    use_case = _build_use_case()
+    use_case = _build_use_case(request)
     try:
         query = CheckQuery(
             {
@@ -61,18 +80,21 @@ async def check(payload: CheckIn) -> RiskCardOut:
     except (QueryInputError, AddressValidationError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    return RiskCardOut(**result)
+    return _encode_response(result)
 
 
 @router.post('/check/address', response_model=RiskCardOut)
-async def check_address(payload: LegacyCheckIn) -> RiskCardOut:
+async def check_address(
+    payload: LegacyCheckIn,
+    request: Request,
+) -> JSONResponse:
     """Выполнить проверку по устаревшему адресу."""
 
-    use_case = _build_use_case()
+    use_case = _build_use_case(request)
     try:
         result = await use_case.execute(payload.address)
 
     except AddressValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    return RiskCardOut(**result)
+    return _encode_response(result)

@@ -40,7 +40,11 @@ class Settings(BaseSettings):
     FIAS_MODE: Literal['stub', 'api'] = 'stub'
     FIAS_BASE_URL: str | None = None
     FIAS_TOKEN: str | None = None
-    FIAS_TIMEOUT_SECONDS: float = 5.0
+    FIAS_TIMEOUT_SECONDS: float = 10.0
+    FIAS_RETRIES: int = 2
+    FIAS_RETRY_BACKOFF_SECONDS: float = 0.5
+    FIAS_CONCURRENCY_LIMIT: int = 5
+    FIAS_SUGGEST_ENDPOINT: str = '/api/spas/v2.0/SearchAddressItem'
     CHECK_CACHE_TTL_SECONDS: int = 600
     CHECK_CACHE_VERSION: str = 'v1'
     STORAGE_MODE: StorageMode = 'db'

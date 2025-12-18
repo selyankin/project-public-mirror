@@ -65,6 +65,9 @@ warn_return_any = true
 asyncio_mode = 'auto'
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    'integration: integration tests hitting external services',
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ['src']

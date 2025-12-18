@@ -23,12 +23,13 @@ from checks.infrastructure.check_cache_repo_inmemory import (
 from checks.infrastructure.check_results_repo_inmemory import (
     InMemoryCheckResultsRepo,
 )
+from checks.infrastructure.fias.client_stub import StubFiasClient
 from risks.application.scoring import build_risk_card
 
 pytestmark = pytest.mark.asyncio
 
 
-def make_use_case():
+def make_use_case(fias_client: StubFiasClient | None = None):
     address_resolver = AddressResolverStub({})
     signals_provider = SignalsProviderStub({})
     address_risk_use_case = AddressRiskCheckUseCase(
@@ -41,6 +42,7 @@ def make_use_case():
         address_risk_check_use_case=address_risk_use_case,
         check_results_repo=check_results_repo,
         check_cache_repo=check_cache_repo,
+        fias_client=fias_client or StubFiasClient(),
         fias_mode='stub',
         cache_version='test',
     )
@@ -60,6 +62,7 @@ async def test_execute_returns_risk_card_dict():
         'unknown',
     )
     assert result['check_id'] is not None
+    assert 'fias' not in result
 
 
 async def test_execute_detects_apartments_signal():
@@ -179,6 +182,7 @@ async def test_address_path_uses_address_risk_use_case():
         address_risk_check_use_case=fake,
         check_results_repo=DummyRepo(),
         check_cache_repo=DummyCacheRepo(),
+        fias_client=StubFiasClient(),
         fias_mode='stub',
         cache_version='test',
     )
@@ -187,3 +191,38 @@ async def test_address_path_uses_address_risk_use_case():
     assert result['score'] == 0
     assert fake.called_with is not None
     assert isinstance(fake.called_with, AddressRaw)
+
+
+async def test_address_path_includes_fias_payload_when_stub_matches():
+    """Если ФИАС нашёл адрес, ответ содержит блок fias."""
+
+    use_case = make_use_case()
+    result = await use_case.execute('г. Москва, ул. Тверская, д. 1')
+    fias_payload = result.get('fias')
+    assert fias_payload is not None
+    assert fias_payload['fias_id'] == 'moscow-001'
+    assert 'normalized' in fias_payload
+
+
+async def test_address_path_without_match_has_no_fias_block():
+    """Если ФИАС не дал результат, поле fias отсутствует."""
+
+    use_case = make_use_case()
+    result = await use_case.execute('ул мира 7')
+    assert 'fias' not in result
+
+
+async def test_url_path_propagates_fias_payload_after_extraction():
+    """URL-вход при извлечении адреса также обогащается fias."""
+
+    use_case = make_use_case()
+    query = CheckQuery(
+        {
+            'type': 'url',
+            'query': 'https://x.test/?address=г.+Москва,+ул.+Тверская',
+        }
+    )
+    result = await use_case.execute_query(query)
+    fias_payload = result.get('fias')
+    assert fias_payload is not None
+    assert fias_payload['normalized'].startswith('г. москва')

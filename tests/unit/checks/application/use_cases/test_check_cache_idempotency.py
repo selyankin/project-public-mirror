@@ -21,6 +21,7 @@ from checks.infrastructure.check_cache_repo_inmemory import (
 from checks.infrastructure.check_results_repo_inmemory import (
     InMemoryCheckResultsRepo,
 )
+from checks.infrastructure.fias.client_stub import StubFiasClient
 from risks.application.scoring import build_risk_card
 
 pytestmark = pytest.mark.asyncio
@@ -69,6 +70,7 @@ async def test_idempotent_behavior_returns_same_check_id() -> None:
         address_risk_check_use_case=fake_risk,
         check_results_repo=InMemoryCheckResultsRepo(),
         check_cache_repo=InMemoryCheckCacheRepo(ttl_seconds=600, now_fn=clock),
+        fias_client=StubFiasClient(),
         fias_mode='stub',
         cache_version='test',
     )
@@ -90,6 +92,7 @@ async def test_cache_expires_after_ttl() -> None:
         address_risk_check_use_case=fake_risk,
         check_results_repo=InMemoryCheckResultsRepo(),
         check_cache_repo=InMemoryCheckCacheRepo(ttl_seconds=1, now_fn=clock),
+        fias_client=StubFiasClient(),
         fias_mode='stub',
         cache_version='test',
     )

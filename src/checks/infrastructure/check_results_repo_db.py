@@ -66,7 +66,7 @@ class CheckResultsRepoDb(CheckResultsRepoPort):
         """Подготовить JSON для сохранения в колонку payload."""
 
         normalized = snapshot.normalized_address
-        return {
+        payload: dict[str, Any] = {
             'normalized_address': {
                 'raw': normalized.raw.value,
                 'normalized': normalized.normalized,
@@ -77,6 +77,11 @@ class CheckResultsRepoDb(CheckResultsRepoPort):
             'signals': [signal.to_dict() for signal in snapshot.signals],
             'risk_card': snapshot.risk_card.to_dict(),
         }
+        if snapshot.fias_payload:
+            payload['fias'] = snapshot.fias_payload
+        if snapshot.fias_debug_raw:
+            payload['fias_debug_raw'] = snapshot.fias_debug_raw
+        return payload
 
     @staticmethod
     def _deserialize_snapshot(model: CheckResultModel) -> CheckResultSnapshot:
@@ -103,4 +108,6 @@ class CheckResultsRepoDb(CheckResultsRepoPort):
             created_at=model.created_at,
             kind=model.kind,
             schema_version=model.schema_version,
+            fias_payload=payload.get('fias'),
+            fias_debug_raw=payload.get('fias_debug_raw'),
         )

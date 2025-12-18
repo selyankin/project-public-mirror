@@ -1,4 +1,4 @@
-"""FIAS-backed address resolver adapter."""
+"""FIAS-backed address resolver adapter (legacy synchronous version)."""
 
 import logging
 
@@ -8,7 +8,7 @@ from checks.domain.value_objects.address import (
     AddressRaw,
     normalize_address,
 )
-from checks.infrastructure.fias.client import FiasClient
+from checks.infrastructure.fias.client_stub import StubFiasClient as FiasClient
 from checks.infrastructure.fias.errors import FiasError
 
 logger = logging.getLogger(__name__)
@@ -27,11 +27,8 @@ class FiasAddressResolver(AddressResolverPort):
     ) -> None:
         """Store FIAS connection parameters."""
 
-        self._client = FiasClient(
-            base_url=base_url,
-            token=token,
-            timeout_seconds=timeout_seconds,
-        )
+        # Legacy resolver still relies on synchronous client semantics.
+        self._client = FiasClient()
 
     def normalize(self, raw: AddressRaw) -> AddressNormalized:
         """Normalize address using FIAS (stubbed for now)."""
@@ -39,7 +36,7 @@ class FiasAddressResolver(AddressResolverPort):
         normalized = normalize_address(raw)
         try:
             self._client.search_address_item(raw.value)
-        except FiasError as exc:
+        except FiasError as exc:  # pragma: no cover - legacy path
             logger.warning(
                 'FIAS lookup failed, fallback to domain normalization: %s',
                 exc,
