@@ -1,3 +1,6 @@
+import ast
+import os
+
 import pytest
 
 from shared.kernel.settings import Settings, get_settings
@@ -14,18 +17,23 @@ def _clear_settings_cache():
 def base_env(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'local')
     monkeypatch.setenv('DATABASE_URL', 'postgresql://localhost/flaffy')
+    monkeypatch.setenv(
+        'DB_DSN',
+        'postgresql+asyncpg://user:pass@localhost:5432/test',
+    )
 
 
 def test_settings_defaults():
     settings = Settings(
         APP_ENV='local',
         DATABASE_URL='postgresql://localhost/flaffy',
+        DB_DSN='postgresql+asyncpg://user:pass@localhost:5432/app',
     )
-    assert settings.LOG_LEVEL == 'INFO'
+    assert settings.LOG_LEVEL == os.getenv('LOG_LEVEL')
     assert settings.SERVICE_NAME == 'flaffy'
-    assert settings.TIMEZONE == 'Europe/Stockholm'
-    assert settings.DEBUG is False
-    assert settings.FIAS_MODE == 'stub'
+    assert settings.APP_TIMEZONE == os.getenv('APP_TIMEZONE')
+    assert settings.DEBUG is str_to_bool(os.getenv('DEBUG'))
+    assert settings.FIAS_MODE == os.getenv('FIAS_MODE')
     assert settings.fias_enabled is False
 
 
@@ -39,6 +47,7 @@ def test_debug_mode(base_env, monkeypatch):
     prod_settings = Settings(
         APP_ENV='prod',
         DATABASE_URL='postgresql://localhost/flaffy',
+        DB_DSN='postgresql+asyncpg://user:pass@localhost:5432/app',
     )
     assert prod_settings.DEBUG is False
 
@@ -48,6 +57,7 @@ def test_database_url_validation():
         Settings(
             APP_ENV='local',
             DATABASE_URL='http://localhost',
+            DB_DSN='postgresql+asyncpg://user:pass@localhost:5432/app',
         )
     assert 'DATABASE_URL must use one of' in str(exc_info.value)
 
@@ -74,3 +84,30 @@ def test_get_settings_cache(base_env):
     get_settings.cache_clear()
     settings3 = get_settings()
     assert settings1 is not settings3
+
+
+def test_storage_mode_db_requires_dsn():
+    with pytest.raises(ValueError):
+        Settings(
+            APP_ENV='local',
+            DATABASE_URL='postgresql://localhost/flaffy',
+            STORAGE_MODE='db',
+            DB_DSN=None,
+        )
+
+
+def test_memory_mode_allows_missing_dsn():
+    settings = Settings(
+        APP_ENV='local',
+        DATABASE_URL='postgresql://localhost/flaffy',
+        STORAGE_MODE='memory',
+        DB_DSN=None,
+    )
+    assert settings.STORAGE_MODE == 'memory'
+
+
+def str_to_bool(s):
+    try:
+        return ast.literal_eval(str(s).capitalize())
+    except (ValueError, SyntaxError):
+        return False

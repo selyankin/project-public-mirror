@@ -28,15 +28,15 @@ class Settings(BaseSettings):
     )
 
     APP_ENV: EnvName = 'local'
-    DATABASE_URL: str = 'postgresql+asyncpg://localhost:5432/flaffy'
-    DB_DSN: str = 'postgresql+asyncpg://test:test@localhost:5432/flaffy_test'
+    DATABASE_URL: str | None = None
+    DB_DSN: str | None = None
     DB_ECHO: bool = False
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
     LOG_LEVEL: LogLevel = 'INFO'
     SERVICE_NAME: str = 'flaffy'
     DEBUG: bool = False
-    TIMEZONE: str = 'Europe/Stockholm'
+    APP_TIMEZONE: str = 'Europe/Stockholm'
     FIAS_MODE: Literal['stub', 'api'] = 'stub'
     FIAS_BASE_URL: str | None = None
     FIAS_TOKEN: str | None = None
@@ -66,6 +66,7 @@ class Settings(BaseSettings):
         """Ensure the database URL uses a supported PostgreSQL driver."""
         if not value:
             raise ValueError('DATABASE_URL must be provided.')
+
         if not any(
             value.startswith(scheme) for scheme in cls._database_schemes
         ):
@@ -74,30 +75,43 @@ class Settings(BaseSettings):
                 '"postgresql://", "postgresql+psycopg://", '
                 '"postgresql+asyncpg://".',
             )
+
         return value
 
     @field_validator('DB_DSN')
     @classmethod
-    def validate_db_dsn(cls, value: str) -> str:
-        """Убедиться, что DSN указан."""
+    def validate_db_dsn(cls, value: str | None) -> str | None:
+        """Проверить валидность DSN, если он передан."""
 
-        if not value:
-            raise ValueError('DB_DSN must be provided.')
+        if value is None:
+            return None
+
+        if not any(
+            value.startswith(scheme) for scheme in cls._database_schemes
+        ):
+            raise ValueError(
+                'DB_DSN must use one of the supported PostgreSQL schemes.',
+            )
 
         return value
 
     @model_validator(mode='after')
     def validate_fias(self) -> 'Settings':
         """Ensure FIAS settings are configured when API mode is enabled."""
+
         if self.fias_enabled:
             if not self.FIAS_BASE_URL:
                 raise ValueError(
                     'FIAS_BASE_URL is required when FIAS_MODE=api.',
                 )
+
             if not self.FIAS_TOKEN:
                 raise ValueError(
                     'FIAS_TOKEN is required when FIAS_MODE=api.',
                 )
+
+        if self.STORAGE_MODE == 'db' and not self.DB_DSN:
+            raise ValueError('DB_DSN is required when STORAGE_MODE=db.')
 
         return self
 

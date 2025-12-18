@@ -1,3 +1,5 @@
+import asyncio
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -5,92 +7,108 @@ import pytest
 from shared.kernel import db
 
 
-@pytest.fixture(autouse=True)
-def reset_db_module_state():
-    db._engine = None
-    db._session_factory = None
-    yield
-    db._engine = None
-    db._session_factory = None
+class DummySession:
+    def __init__(self) -> None:
+        self.commits = 0
+        self.rollbacks = 0
+        self.closed = 0
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+
+    async def close(self) -> None:
+        self.closed += 1
 
 
-def test_get_engine_lazily_initialises_engine(monkeypatch):
-    fake_engine = object()
-    call_stats = {'count': 0}
+class DummyFactory:
+    def __init__(self) -> None:
+        self.instance: DummySession | None = None
 
-    def fake_create_async_engine(url, **kwargs):
-        call_stats['count'] += 1
-        call_stats['url'] = url
-        call_stats['kwargs'] = kwargs
-        return fake_engine
-
-    monkeypatch.setattr(db, 'create_async_engine', fake_create_async_engine)
-    monkeypatch.setattr(
-        db,
-        'get_settings',
-        lambda: SimpleNamespace(DATABASE_URL='postgresql+asyncpg://db'),
-    )
-
-    engine1 = db.get_engine()
-    engine2 = db.get_engine()
-
-    assert engine1 is engine2 is fake_engine
-    assert call_stats['count'] == 1
-    assert call_stats['url'] == 'postgresql+asyncpg://db'
-    assert call_stats['kwargs'] == {'echo': False, 'future': True}
-
-
-def test_get_session_factory_configures_async_sessionmaker(monkeypatch):
-    fake_engine = object()
-    factory_instance = object()
-    call_stats = {}
-
-    def fake_get_engine():
-        call_stats['engine_calls'] = call_stats.get('engine_calls', 0) + 1
-        return fake_engine
-
-    def fake_sessionmaker(engine, **kwargs):
-        call_stats['engine'] = engine
-        call_stats['kwargs'] = kwargs
-        return factory_instance
-
-    monkeypatch.setattr(db, 'get_engine', fake_get_engine)
-    monkeypatch.setattr(db, 'async_sessionmaker', fake_sessionmaker)
-
-    factory1 = db.get_session_factory()
-    factory2 = db.get_session_factory()
-
-    assert factory1 is factory2 is factory_instance
-    assert call_stats['engine_calls'] == 1
-    assert call_stats['engine'] is fake_engine
-    assert call_stats['kwargs'] == {
-        'expire_on_commit': False,
-        'autoflush': False,
-        'autocommit': False,
-    }
+    def __call__(self) -> DummySession:
+        self.instance = DummySession()
+        return self.instance
 
 
 @pytest.mark.asyncio
-async def test_get_db_session_yields_and_closes_session(monkeypatch):
-    class DummySession:
-        def __init__(self):
-            self.closed = False
+async def test_session_scope_commits_and_closes():
+    """Контекст сессии коммитит транзакцию и закрывает сессию."""
 
-        async def close(self):
-            self.closed = True
+    factory = DummyFactory()
 
-    dummy_session = DummySession()
+    async with db.session_scope(factory) as session:
+        assert session.commits == 0
 
-    def dummy_factory():
-        return dummy_session
+    assert factory.instance is not None
+    assert factory.instance.commits == 1
+    assert factory.instance.closed == 1
 
-    monkeypatch.setattr(db, 'get_session_factory', lambda: dummy_factory)
 
-    session_gen = db.get_db_session()
+@pytest.mark.asyncio
+async def test_session_scope_rolls_back_on_error():
+    """При ошибке транзакция откатывается."""
+
+    factory = DummyFactory()
+
+    with pytest.raises(RuntimeError):
+        async with db.session_scope(factory):
+            raise RuntimeError('boom')
+
+    assert factory.instance is not None
+    assert factory.instance.rollbacks == 1
+    assert factory.instance.closed == 1
+
+
+def test_create_sessionmaker_configures_defaults():
+    """Фабрика сессий выключает expire/autoflush/autocommit."""
+
+    settings = SimpleNamespace(
+        DB_DSN=os.getenv('DB_DSN'),
+        DATABASE_URL=os.getenv('DATABASE_URL'),
+        DB_ECHO=False,
+        DB_POOL_SIZE=None,
+        DB_MAX_OVERFLOW=None,
+    )
+    engine = db.create_engine(
+        SimpleNamespace(
+            DB_DSN=settings.DB_DSN,
+            DATABASE_URL=settings.DATABASE_URL,
+            DB_ECHO=settings.DB_ECHO,
+            DB_POOL_SIZE=settings.DB_POOL_SIZE,
+            DB_MAX_OVERFLOW=settings.DB_MAX_OVERFLOW,
+        ),
+    )
+    try:
+        factory = db.create_sessionmaker(engine)
+        assert factory.kw.get('expire_on_commit') is False
+        assert factory.kw.get('autoflush') is False
+        assert factory.kw.get('autocommit') is False
+    finally:
+        asyncio.run(engine.dispose())
+
+
+@pytest.mark.asyncio
+async def test_get_db_session_reads_from_request_state():
+    """Зависимость FastAPI использует фабрику из состояния приложения."""
+
+    factory = DummyFactory()
+    state = SimpleNamespace(db_session_factory=factory)
+    request = SimpleNamespace(app=SimpleNamespace(state=state))
+
+    session_gen = db.get_db_session(request)
     session = await anext(session_gen)
-
-    assert session is dummy_session
-    assert dummy_session.closed is False
-
+    assert session is factory.instance
     await session_gen.aclose()
-    assert dummy_session.closed is True
+    assert factory.instance.closed == 1
+
+
+@pytest.mark.asyncio
+async def test_get_db_session_requires_configured_factory():
+    """Если фабрика не задана, поднимается ошибка."""
+
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
+    with pytest.raises(RuntimeError):
+        session_gen = db.get_db_session(request)
+        await anext(session_gen)

@@ -11,4 +11,5 @@ alembic upgrade head
 ```
 
 The DSN is taken from the `DB_DSN`/`DATABASE_URL` environment variables, so
-no credentials are stored in `alembic.ini`.
+no credentials are stored in `alembic.ini`. When the application runs with
+`STORAGE_MODE=db`, you must provide `DB_DSN` explicitly via the environment.

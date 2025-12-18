@@ -19,6 +19,11 @@ def _configure_settings_env():
     )
     os.environ.setdefault('APP_ENV', 'local')
     os.environ.setdefault('LOG_LEVEL', 'INFO')
+    os.environ.setdefault(
+        'DB_DSN',
+        'postgresql+asyncpg://user:pass@localhost:5432/test',
+    )
+    os.environ.setdefault('STORAGE_MODE', 'memory')
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

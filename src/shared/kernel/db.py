@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from fastapi import Request
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -13,10 +14,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from shared.kernel.settings import Settings, get_settings
-
-_engine: AsyncEngine | None = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+from shared.kernel.settings import Settings
 
 
 def _resolve_dsn(settings: Settings) -> str:
@@ -47,16 +45,6 @@ def create_engine(settings: Settings) -> AsyncEngine:
     return create_async_engine(dsn, **kwargs)
 
 
-def get_engine() -> AsyncEngine:
-    """Лениво вернуть экземпляр AsyncEngine."""
-
-    global _engine
-    if _engine is None:
-        settings = get_settings()
-        _engine = create_engine(settings)
-    return _engine
-
-
 def create_sessionmaker(
     engine: AsyncEngine,
 ) -> async_sessionmaker[AsyncSession]:
@@ -68,15 +56,6 @@ def create_sessionmaker(
         autoflush=False,
         autocommit=False,
     )
-
-
-def get_session_factory() -> async_sessionmaker[AsyncSession]:
-    """Лениво вернуть фабрику сессий."""
-
-    global _session_factory
-    if _session_factory is None:
-        _session_factory = create_sessionmaker(get_engine())
-    return _session_factory
 
 
 @asynccontextmanager
@@ -96,8 +75,12 @@ async def session_scope(
         await session.close()
 
 
-async def get_db_session() -> AsyncIterator[AsyncSession]:
-    """Асинхронный генератор сессий по умолчанию."""
+async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
+    """Получить сессию, используя фабрику из состояния приложения."""
 
-    async with session_scope(get_session_factory()) as session:
+    session_factory = getattr(request.app.state, 'db_session_factory', None)
+    if session_factory is None:
+        raise RuntimeError('Session factory is not configured in app state.')
+
+    async with session_scope(session_factory) as session:
         yield session

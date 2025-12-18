@@ -8,12 +8,9 @@ from sqlalchemy import text
 
 from checks.api.routes.check import router as check_router
 from reports.api.routes import router as reports_router
-from shared.kernel.db import (
-    create_engine,
-    create_sessionmaker,
-    session_scope,
-)
+from shared.kernel.db import create_engine, create_sessionmaker, session_scope
 from shared.kernel.logging import get_logger, setup_logging
+from shared.kernel.repositories import configure_repositories
 from shared.kernel.settings import get_settings
 
 RouterFactory = Callable[[], APIRouter]
@@ -64,6 +61,7 @@ def create_app() -> FastAPI:
     logger = get_logger()
     engine = create_engine(settings)
     session_factory = create_sessionmaker(engine)
+    configure_repositories(session_factory)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
