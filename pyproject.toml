@@ -3,9 +3,10 @@ name = "flaffy-back"
 version = "0.1.0"
 description = "Flaffy — real estate risk assessment platform"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.12,<4.0"
+python = ">=3.11"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
@@ -40,18 +41,12 @@ dependencies = [
     'structlog>=24.1',
 ]
 
-[tool.optional-dependencies]
-dev = [
-    'pytest>=8.0',
-    'pytest-asyncio>=0.23',
-
-    'mypy>=1.9',
-    'ruff>=0.3',
-    'black>=24.3',
-
-    'types-redis',
-    'types-requests',
-]
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23"
+ruff = "^0.6.0"
+mypy = "^1.10.0"
+black = "^24.3"
 
 [tool.black]
 line-length = 80

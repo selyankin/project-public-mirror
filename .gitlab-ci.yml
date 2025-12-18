@@ -13,16 +13,17 @@ cache:
 
 before_script:
   - python -V
-  - pip install -U pip
-  - pip install -e '.[dev]'
+  - pip install poetry
+  - poetry lock
+  - poetry install --no-interaction --no-ansi
 
 lint:
   stage: lint
   script:
-    - ruff check .
-    - black --check .
+    - poetry run ruff check .
+    - poetry run black --check .
 
 test:
   stage: test
   script:
-    - pytest -q
+    - poetry run pytest -q
