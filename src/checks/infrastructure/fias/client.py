@@ -7,6 +7,7 @@ from time import perf_counter
 from typing import Final
 
 import httpx
+
 from checks.infrastructure.fias.dto import (
     FiasErrorResponse,
     FiasSearchAddressItemResponse,

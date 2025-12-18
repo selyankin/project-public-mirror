@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+
 from checks.adapters.address_resolver_stub import AddressResolverStub
 from checks.adapters.signals_provider_stub import SignalsProviderStub
 from checks.application.use_cases.address_risk_check import (

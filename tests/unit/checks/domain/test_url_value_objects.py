@@ -1,4 +1,5 @@
 import pytest
+
 from checks.domain.value_objects.url import UrlRaw
 
 

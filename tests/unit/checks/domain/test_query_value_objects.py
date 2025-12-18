@@ -1,4 +1,5 @@
 import pytest
+
 from checks.domain.constants.enums.domain import QueryType
 from checks.domain.value_objects.query import CheckQuery, QueryInputError
 

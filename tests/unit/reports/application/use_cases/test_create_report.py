@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
+
 from checks.domain.entities.check_result import CheckResultSnapshot
 from checks.domain.value_objects.address import (
     normalize_address,

@@ -1,6 +1,7 @@
 """Тесты интеграции резолвера адресов с ФИАС."""
 
 import pytest
+
 from checks.domain.value_objects.address import normalize_address_raw
 from checks.infrastructure.address_resolver_fias import FiasAddressResolver
 from checks.infrastructure.fias.errors import FiasError

@@ -1,4 +1,5 @@
 import pytest
+
 from risks.domain.constants.enums.risk import SignalSeverity
 from risks.domain.entities.risk_card import (
     RiskCard,

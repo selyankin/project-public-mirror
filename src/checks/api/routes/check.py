@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, HTTPException
+
 from checks.adapters.signals_provider_stub import SignalsProviderStub
 from checks.application.use_cases.address_risk_check import (
     AddressRiskCheckUseCase,
@@ -17,7 +19,6 @@ from checks.presentation.api.v1.serialization.input.checks import (
     LegacyCheckIn,
 )
 from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
-from fastapi import APIRouter, HTTPException
 from shared.kernel.repositories import check_results_repo
 from shared.kernel.settings import get_settings
 

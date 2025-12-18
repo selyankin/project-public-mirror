@@ -1,6 +1,7 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
 from shared.kernel.bootstrap import create_app
 from shared.kernel.settings import get_settings
 

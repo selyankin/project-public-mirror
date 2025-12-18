@@ -1,4 +1,5 @@
 import pytest
+
 from shared.kernel.settings import Settings, get_settings
 
 

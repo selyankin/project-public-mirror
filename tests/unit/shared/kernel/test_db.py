@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+
 from shared.kernel import db
 
 

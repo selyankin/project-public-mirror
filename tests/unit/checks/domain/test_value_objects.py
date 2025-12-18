@@ -1,4 +1,5 @@
 import pytest
+
 from checks.domain.value_objects.address import (
     AddressValidationError,
     normalize_address,

@@ -3,8 +3,9 @@
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
-from checks.api.routes.check import router as check_router
 from fastapi import APIRouter, FastAPI
+
+from checks.api.routes.check import router as check_router
 from reports.api.routes import router as reports_router
 from shared.kernel.logging import get_logger, setup_logging
 from shared.kernel.settings import get_settings

@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 from shared.kernel import logging as logging_module
 from shared.kernel.settings import get_settings
 
