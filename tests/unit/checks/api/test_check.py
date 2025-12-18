@@ -32,6 +32,7 @@ def test_check_endpoint_returns_risk_card():
     assert {'score', 'level', 'summary', 'signals'} <= data.keys()
     assert data['address_source'] == 'stub'
     assert data['address_confidence'] is not None
+    assert data['check_id'] is not None
 
 
 def test_check_endpoint_handles_url():

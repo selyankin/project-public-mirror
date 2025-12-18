@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from checks.adapters.signals_provider_stub import SignalsProviderStub
+from checks.application.use_cases.address_risk_check import (
+    AddressRiskCheckUseCase,
+)
 from checks.application.use_cases.check_address import CheckAddressUseCase
 from checks.domain.value_objects.address import AddressValidationError
 from checks.domain.value_objects.query import CheckQuery, QueryInputError
@@ -15,6 +18,7 @@ from checks.presentation.api.v1.serialization.input.checks import (
 )
 from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
 from fastapi import APIRouter, HTTPException
+from shared.kernel.repositories import check_results_repo
 from shared.kernel.settings import get_settings
 
 router = APIRouter()
@@ -25,10 +29,14 @@ def _build_use_case() -> CheckAddressUseCase:
     settings = get_settings()
     address_resolver = build_address_resolver(settings)
     signals_provider = SignalsProviderStub({})
+    address_risk_use_case = AddressRiskCheckUseCase(
+        address_resolver=address_resolver,
+        signals_provider=signals_provider,
+    )
 
     return CheckAddressUseCase(
-        address_resolver,
-        signals_provider,
+        address_risk_check_use_case=address_risk_use_case,
+        check_results_repo=check_results_repo,
     )
 
 

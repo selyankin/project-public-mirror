@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from checks.api.routes.check import router as check_router
 from fastapi import APIRouter, FastAPI
+from reports.api.routes import router as reports_router
 from shared.kernel.logging import get_logger, setup_logging
 from shared.kernel.settings import get_settings
 
@@ -28,6 +29,11 @@ ROUTER_FACTORIES = (
         check_router,
         '/v1',
         ['check'],
+    ),
+    (
+        reports_router,
+        '/v1',
+        ['reports'],
     ),
 )
 

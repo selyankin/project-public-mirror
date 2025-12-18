@@ -1,7 +1,11 @@
 """Application ports for check-related services."""
 
-from typing import Protocol
+from __future__ import annotations
 
+from typing import Protocol
+from uuid import UUID
+
+from checks.domain.entities.check_result import CheckResultSnapshot
 from checks.domain.value_objects.address import (
     AddressNormalized,
     AddressRaw,
@@ -21,3 +25,13 @@ class SignalsProviderPort(Protocol):
 
     def collect(self, normalized: AddressNormalized) -> tuple[RiskSignal, ...]:
         """Собрать агрегированный набор сигналов по адресу."""
+
+
+class CheckResultsRepoPort(Protocol):
+    """Порт для сохранения и чтения результатов проверок."""
+
+    def save(self, result: CheckResultSnapshot) -> UUID:
+        """Сохранить результат и вернуть идентификатор."""
+
+    def get(self, check_id: UUID) -> CheckResultSnapshot | None:
+        """Получить сохранённый результат."""

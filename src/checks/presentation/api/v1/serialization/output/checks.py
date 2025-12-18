@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -20,3 +22,4 @@ class RiskCardOut(BaseModel):
     signals: list[RiskSignalOut]
     address_confidence: str | None = None
     address_source: str | None = None
+    check_id: UUID | None = None
