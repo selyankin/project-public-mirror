@@ -6,13 +6,15 @@ from checks.domain.value_objects.address import normalize_address_raw
 from checks.infrastructure.address_resolver_fias import FiasAddressResolver
 from checks.infrastructure.fias.errors import FiasError
 
+pytestmark = pytest.mark.asyncio
+
 
 class _BaseDummyClient:
     def __init__(self, *args, **kwargs):
         """Поддерживает интерфейс реального клиента."""
 
 
-def test_fias_resolver_marks_source_on_success(
+async def test_fias_resolver_marks_source_on_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Успешный вызов клиента должен выставить source=fias."""
@@ -28,12 +30,12 @@ def test_fias_resolver_marks_source_on_success(
 
     resolver = FiasAddressResolver('https://test', 'token', 1.0)
     raw = normalize_address_raw('г. Москва, ул. Тверская, д. 1')
-    normalized = resolver.normalize(raw)
+    normalized = await resolver.normalize(raw)
 
     assert normalized.source == 'fias'
 
 
-def test_fias_resolver_fallback_keeps_stub_source(
+async def test_fias_resolver_fallback_keeps_stub_source(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ошибка клиента оставляет source=stub."""
@@ -49,6 +51,6 @@ def test_fias_resolver_fallback_keeps_stub_source(
 
     resolver = FiasAddressResolver('https://test', 'token', 1.0)
     raw = normalize_address_raw('г. Москва')
-    normalized = resolver.normalize(raw)
+    normalized = await resolver.normalize(raw)
 
     assert normalized.source == 'stub'

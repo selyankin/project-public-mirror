@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+from reports.domain.modules.catalog import DEFAULT_MODULES
 
 
 class CreateReportIn(BaseModel):
     """Запрос на создание отчёта."""
 
     check_id: UUID
-    modules: list[str] = Field(default_factory=list)
+    modules: list[str] = Field(default_factory=lambda: list(DEFAULT_MODULES))
 
 
 class CreateReportOut(BaseModel):
@@ -22,39 +25,17 @@ class CreateReportOut(BaseModel):
     status: str
 
 
-class ReportPayloadAddressOut(BaseModel):
-    raw: str | None
-    normalized: str
-    confidence: str | None
-    source: str | None
-
-
-class ReportPayloadRiskOut(BaseModel):
-    score: int
-    level: str
-    summary: str
-
-
-class ReportPayloadSignalOut(BaseModel):
-    code: str
-    title: str
-    description: str
-    severity: int
-
-
 class ReportPayloadMetaOut(BaseModel):
     check_id: UUID
     generated_at: datetime
+    schema_version: int
+    modules: list[str]
+    disclaimers: list[str]
 
 
 class ReportPayloadOut(BaseModel):
-    title: str
-    summary: str
-    address: ReportPayloadAddressOut
-    risk: ReportPayloadRiskOut
-    signals: list[ReportPayloadSignalOut]
-    disclaimers: list[str]
-    generated_from: ReportPayloadMetaOut
+    meta: ReportPayloadMetaOut
+    sections: dict[str, Any]
 
 
 class ReportOut(BaseModel):

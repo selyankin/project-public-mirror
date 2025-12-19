@@ -30,7 +30,7 @@ class FiasAddressResolver(AddressResolverPort):
         # Legacy resolver still relies on synchronous client semantics.
         self._client = FiasClient()
 
-    def normalize(self, raw: AddressRaw) -> AddressNormalized:
+    async def normalize(self, raw: AddressRaw) -> AddressNormalized:
         """Normalize address using FIAS (stubbed for now)."""
 
         normalized = normalize_address(raw)

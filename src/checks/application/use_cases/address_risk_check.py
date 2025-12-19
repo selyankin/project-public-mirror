@@ -41,11 +41,11 @@ class AddressRiskCheckUseCase:
         self._address_resolver = address_resolver
         self._signals_provider = signals_provider
 
-    def execute(self, raw_address: AddressRaw) -> AddressRiskCheckResult:
+    async def execute(self, raw_address: AddressRaw) -> AddressRiskCheckResult:
         """Выполнить полный цикл нормализации и построения риска."""
 
-        normalized = self._address_resolver.normalize(raw_address)
-        signals_tuple = self._signals_provider.collect(normalized)
+        normalized = await self._address_resolver.normalize(raw_address)
+        signals_tuple = await self._signals_provider.collect(normalized)
         risk_card = build_risk_card(signals_tuple)
         return AddressRiskCheckResult(
             normalized_address=normalized,

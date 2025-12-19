@@ -162,7 +162,7 @@ class CheckAddressUseCase:
         if cached:
             return cached[0], cached[1], None, ()
 
-        risk_result, signals = self._run_address_risk_check(text)
+        risk_result, signals = await self._run_address_risk_check(text)
         snapshot, check_id = await self._store_check_result(
             normalized_input,
             risk_result,
@@ -197,7 +197,9 @@ class CheckAddressUseCase:
             fias_payload, fias_debug_raw = await self._fetch_fias_data(
                 extracted,
             )
-            risk_result, signals = self._run_address_risk_check(extracted)
+            risk_result, signals = await self._run_address_risk_check(
+                extracted,
+            )
             snapshot, check_id = await self._store_check_result(
                 normalized_address_input,
                 risk_result,
@@ -269,14 +271,16 @@ class CheckAddressUseCase:
 
         return result
 
-    def _run_address_risk_check(
+    async def _run_address_risk_check(
         self,
         raw_address: str,
     ) -> tuple[AddressRiskCheckResult, tuple[RiskSignal, ...]]:
         """Запустить сценарий риск-проверки адреса."""
 
         normalized_raw = normalize_address_raw(raw_address)
-        result = self._address_risk_check_use_case.execute(normalized_raw)
+        result = await self._address_risk_check_use_case.execute(
+            normalized_raw,
+        )
         return result, tuple(result.signals)
 
     async def _store_check_result(

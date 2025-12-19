@@ -163,7 +163,7 @@ async def test_user_flow_check_and_report() -> None:
                 '/v1/reports',
                 json={
                     'check_id': check_id,
-                    'modules': ['base'],
+                    'modules': ['base_summary'],
                 },
             )
             assert report_response.status_code == 200
@@ -175,7 +175,6 @@ async def test_user_flow_check_and_report() -> None:
             assert fetch_response.status_code == 200
             full_report = fetch_response.json()
             assert full_report['check_id'] == check_id
-            assert (
-                full_report['payload']['generated_from']['check_id'] == check_id
-            )
-            assert full_report['payload']['address']['normalized']
+            payload_meta = full_report['payload']['meta']
+            assert payload_meta['check_id'] == check_id
+            assert 'base_summary' in full_report['payload']['sections']

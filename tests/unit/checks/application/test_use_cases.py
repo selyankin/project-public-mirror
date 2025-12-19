@@ -151,7 +151,7 @@ async def test_address_path_uses_address_risk_use_case():
                 risk_card=build_risk_card(()),
             )
 
-        def execute(self, raw):
+        async def execute(self, raw):
             self.called_with = raw
             return self._result
 

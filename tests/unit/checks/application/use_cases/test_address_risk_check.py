@@ -1,5 +1,7 @@
 """Тесты AddressRiskCheckUseCase."""
 
+import pytest
+
 from checks.adapters.address_resolver_stub import AddressResolverStub
 from checks.adapters.signals_provider_stub import SignalsProviderStub
 from checks.application.use_cases.address_risk_check import (
@@ -7,8 +9,10 @@ from checks.application.use_cases.address_risk_check import (
 )
 from checks.domain.value_objects.address import normalize_address_raw
 
+pytestmark = pytest.mark.asyncio
 
-def test_risk_check_use_case_produces_confidence_signal() -> None:
+
+async def test_risk_check_use_case_produces_confidence_signal() -> None:
     """Новый use-case возвращает сигналы и риск-карту."""
 
     resolver = AddressResolverStub({})
@@ -19,7 +23,7 @@ def test_risk_check_use_case_produces_confidence_signal() -> None:
     )
 
     raw = normalize_address_raw('г. Москва')
-    result = use_case.execute(raw)
+    result = await use_case.execute(raw)
 
     assert result.normalized_address.normalized.startswith('г.')
     codes = [signal.code for signal in result.signals]

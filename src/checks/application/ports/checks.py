@@ -17,15 +17,18 @@ from risks.domain.entities.risk_card import RiskSignal
 class AddressResolverPort(Protocol):
     """Порт сервиса нормализации адресов."""
 
-    def normalize(self, raw: AddressRaw) -> AddressNormalized:
-        """Преобразовать сырой адрес в каноничное представление."""
+    async def normalize(self, raw: AddressRaw) -> AddressNormalized:
+        """Асинхронно нормализовать сырой адрес."""
 
 
 class SignalsProviderPort(Protocol):
     """Агрегирующий провайдер сигналов риска."""
 
-    def collect(self, normalized: AddressNormalized) -> tuple[RiskSignal, ...]:
-        """Собрать агрегированный набор сигналов по адресу."""
+    async def collect(
+        self,
+        normalized: AddressNormalized,
+    ) -> tuple[RiskSignal, ...]:
+        """Асинхронно собрать агрегированный набор сигналов."""
 
 
 class CheckResultsRepoPort(Protocol):

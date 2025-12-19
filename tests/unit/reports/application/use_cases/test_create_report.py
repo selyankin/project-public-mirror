@@ -53,7 +53,7 @@ async def test_create_report_not_found_check() -> None:
     )
 
     with pytest.raises(CheckResultNotFoundError):
-        await use_case.execute(UUID(int=0), [])
+        await use_case.execute(UUID(int=0), ['base_summary'])
 
 
 async def test_create_report_success() -> None:
@@ -67,16 +67,12 @@ async def test_create_report_success() -> None:
         payments_service=PaymentsServiceStub(),
     )
 
-    report = await use_case.execute(check_id, ['base'])
+    report = await use_case.execute(check_id, ['base_summary'])
     snapshot = await repo.get(check_id)
     assert snapshot is not None
 
     assert isinstance(report, Report)
     assert report.status == 'ready'
-    assert report.payload.generated_from.check_id == check_id
-    assert report.payload.risk.score == snapshot.risk_card.score
-    assert len(report.payload.signals) == len(snapshot.signals)
-    assert (
-        report.payload.address.confidence
-        == snapshot.normalized_address.confidence
-    )
+    assert report.payload.meta.check_id == check_id
+    assert report.payload.meta.modules[0] == 'base_summary'
+    assert 'base_summary' in report.payload.sections

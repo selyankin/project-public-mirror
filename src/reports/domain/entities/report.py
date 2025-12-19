@@ -4,58 +4,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 
 @dataclass(slots=True)
-class ReportPayloadAddress:
-    """Адресная часть отчёта."""
-
-    raw: str | None
-    normalized: str
-    confidence: str | None
-    source: str | None
-
-
-@dataclass(slots=True)
-class ReportPayloadRisk:
-    """Сводка по риску."""
-
-    score: int
-    level: str
-    summary: str
-
-
-@dataclass(slots=True)
-class ReportPayloadSignal:
-    """Описание сигнала внутри отчёта."""
-
-    code: str
-    title: str
-    description: str
-    severity: int
-
-
-@dataclass(slots=True)
 class ReportPayloadMeta:
-    """Метаданные происхождения отчёта."""
+    """Метаданные и служебная информация отчёта."""
 
     check_id: UUID
     generated_at: datetime
+    schema_version: int
+    modules: list[str]
+    disclaimers: list[str]
 
 
 @dataclass(slots=True)
 class ReportPayload:
-    """Полезная нагрузка отчёта для клиента."""
+    """Полезная нагрузка отчёта в виде модульных секций."""
 
-    title: str
-    summary: str
-    address: ReportPayloadAddress
-    risk: ReportPayloadRisk
-    signals: list[ReportPayloadSignal]
-    disclaimers: list[str]
-    generated_from: ReportPayloadMeta
+    meta: ReportPayloadMeta
+    sections: dict[str, Any]
 
 
 @dataclass(slots=True)

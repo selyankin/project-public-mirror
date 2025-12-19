@@ -56,7 +56,7 @@ class FakeAddressRiskCheckUseCase:
         )
         self.calls = 0
 
-    def execute(self, raw):
+    async def execute(self, raw):
         self.calls += 1
         return self._result
 

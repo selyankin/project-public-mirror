@@ -23,7 +23,11 @@ def base_env(monkeypatch):
     )
 
 
-def test_settings_defaults():
+def test_settings_defaults(monkeypatch):
+    monkeypatch.setenv('LOG_LEVEL', 'INFO')
+    monkeypatch.setenv('APP_TIMEZONE', 'Europe/Moscow')
+    monkeypatch.setenv('DEBUG', 'false')
+    monkeypatch.setenv('FIAS_MODE', 'stub')
     settings = Settings(
         APP_ENV='local',
         DATABASE_URL='postgresql://localhost/flaffy',

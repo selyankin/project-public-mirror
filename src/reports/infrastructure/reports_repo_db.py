@@ -13,10 +13,7 @@ from reports.application.ports.repos import ReportsRepoPort
 from reports.domain.entities.report import (
     Report,
     ReportPayload,
-    ReportPayloadAddress,
     ReportPayloadMeta,
-    ReportPayloadRisk,
-    ReportPayloadSignal,
 )
 from shared.infra.db.models.report import ReportModel
 from shared.kernel.db import session_scope
@@ -66,34 +63,16 @@ class ReportsRepoDb(ReportsRepoPort):
     def _serialize_payload(payload: ReportPayload) -> dict[str, Any]:
         """Преобразовать доменный payload в JSON."""
 
+        meta = payload.meta
         return {
-            'title': payload.title,
-            'summary': payload.summary,
-            'address': {
-                'raw': payload.address.raw,
-                'normalized': payload.address.normalized,
-                'confidence': payload.address.confidence,
-                'source': payload.address.source,
+            'meta': {
+                'check_id': str(meta.check_id),
+                'generated_at': meta.generated_at.isoformat(),
+                'schema_version': meta.schema_version,
+                'modules': list(meta.modules),
+                'disclaimers': list(meta.disclaimers),
             },
-            'risk': {
-                'score': payload.risk.score,
-                'level': payload.risk.level,
-                'summary': payload.risk.summary,
-            },
-            'signals': [
-                {
-                    'code': signal.code,
-                    'title': signal.title,
-                    'description': signal.description,
-                    'severity': signal.severity,
-                }
-                for signal in payload.signals
-            ],
-            'disclaimers': list(payload.disclaimers),
-            'generated_from': {
-                'check_id': str(payload.generated_from.check_id),
-                'generated_at': payload.generated_from.generated_at.isoformat(),
-            },
+            'sections': payload.sections,
         }
 
     @staticmethod
@@ -101,38 +80,18 @@ class ReportsRepoDb(ReportsRepoPort):
         """Собрать доменный отчёт из ORM-модели."""
 
         payload_dict: dict[str, Any] = model.payload
-        address_dict = payload_dict['address']
-        risk_dict = payload_dict['risk']
-        signals = [
-            ReportPayloadSignal(
-                code=item['code'],
-                title=item['title'],
-                description=item['description'],
-                severity=item['severity'],
-            )
-            for item in payload_dict.get('signals', [])
-        ]
-        meta = payload_dict['generated_from']
+        meta_dict = payload_dict.get('meta') or {}
         payload = ReportPayload(
-            title=payload_dict['title'],
-            summary=payload_dict['summary'],
-            address=ReportPayloadAddress(
-                raw=address_dict.get('raw'),
-                normalized=address_dict['normalized'],
-                confidence=address_dict.get('confidence'),
-                source=address_dict.get('source'),
+            meta=ReportPayloadMeta(
+                check_id=UUID(meta_dict.get('check_id', model.check_id)),
+                generated_at=_parse_datetime(
+                    meta_dict.get('generated_at', model.created_at.isoformat()),
+                ),
+                schema_version=int(meta_dict.get('schema_version', 1)),
+                modules=list(meta_dict.get('modules') or []),
+                disclaimers=list(meta_dict.get('disclaimers') or []),
             ),
-            risk=ReportPayloadRisk(
-                score=risk_dict['score'],
-                level=risk_dict['level'],
-                summary=risk_dict['summary'],
-            ),
-            signals=signals,
-            disclaimers=list(payload_dict.get('disclaimers', [])),
-            generated_from=ReportPayloadMeta(
-                check_id=UUID(meta['check_id']),
-                generated_at=_parse_datetime(meta['generated_at']),
-            ),
+            sections=dict(payload_dict.get('sections') or {}),
         )
         return Report(
             id=model.id,

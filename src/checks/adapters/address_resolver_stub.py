@@ -19,8 +19,9 @@ class AddressResolverStub:
         self._data = dict(data)
 
     @staticmethod
-    def normalize(raw: AddressRaw) -> AddressNormalized:
+    async def normalize(raw: AddressRaw) -> AddressNormalized:
         """Normalize raw address using domain normalization rules."""
+
         normalized = normalize_address(raw)
         normalized.source = 'stub'
         return normalized

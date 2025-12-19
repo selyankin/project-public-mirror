@@ -34,7 +34,10 @@ class SignalsProviderStub:
 
         self._pipeline = SignalsPipeline({'sources': sources})
 
-    def collect(self, normalized: AddressNormalized) -> tuple[RiskSignal, ...]:
+    async def collect(
+        self,
+        normalized: AddressNormalized,
+    ) -> tuple[RiskSignal, ...]:
         """Собрать сигналы адреса через встроенный пайплайн."""
 
         context = SignalsContext(address=normalized)

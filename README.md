@@ -44,3 +44,35 @@ After enabling the API mode, the `/v1/check` endpoint returns an extra block:
 ```
 
 In environments without credentials the service falls back to the stub client.
+
+## Reports modules
+
+The `/v1/reports` endpoint accepts a list of module ids. When omitted the
+request defaults to `['base_summary']`. Available modules:
+
+- `base_summary` — краткое резюме по проверке (обязательный минимум)
+- `address_quality` — дополнительные данные о нормализации адреса
+- `risk_signals` — перечень всех активных сигналов
+- `fias_normalization` — расширенный FIAS-блок (платный, зависит от первых двух)
+
+Module validation is strict: unknown ids or an empty list produce HTTP 400
+with a response such as:
+
+```json
+{
+  "detail": {
+    "message": "unknown module: risk_ai",
+    "modules": ["risk_ai"]
+  }
+}
+```
+
+Paid modules require enabling `REPORTS_ALLOW_PAID_MODULES=true`; otherwise
+the API returns HTTP 402 with a similar payload. Example request body:
+
+```json
+{
+  "check_id": "1f394e39-5082-4cae-b2da-1c53aae4cdd6",
+  "modules": ["base_summary", "address_quality"]
+}
+```
