@@ -18,7 +18,10 @@ class ReportModuleSpec:
 
 
 DEFAULT_MODULE_ID: Final[str] = 'base_summary'
-DEFAULT_MODULES: Final[tuple[str, ...]] = (DEFAULT_MODULE_ID,)
+DEFAULT_MODULES: Final[tuple[str, ...]] = (
+    DEFAULT_MODULE_ID,
+    'address_quality',
+)
 
 DEFAULT_MODULE_SPECS: Final[list[ReportModuleSpec]] = [
     ReportModuleSpec(

@@ -62,13 +62,5 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_return_any = true
 
-[tool.pytest.ini_options]
-asyncio_mode = 'auto'
-pythonpath = ["src"]
-testpaths = ["tests"]
-markers = [
-    'integration: integration tests hitting external services',
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ['src']

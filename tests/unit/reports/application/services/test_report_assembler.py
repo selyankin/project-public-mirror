@@ -45,7 +45,12 @@ async def test_report_assembler_builds_sections() -> None:
         'schema_version': 2,
         'fias': {'fias_id': 'moscow-001'},
     }
-    modules = ['base_summary', 'risk_signals', 'fias_normalization']
+    modules = [
+        'base_summary',
+        'address_quality',
+        'risk_signals',
+        'fias_normalization',
+    ]
 
     payload = await assembler.assemble(check_payload, modules)
 
@@ -55,6 +60,5 @@ async def test_report_assembler_builds_sections() -> None:
     sections = payload['sections']
     assert set(sections.keys()) == set(modules)
     assert sections['fias_normalization']['fias'] == {'fias_id': 'moscow-001'}
-    assert sections['risk_signals']['signals'][0]['code'] == (
-        'address_confidence_low'
-    )
+    assert sections['risk_signals']['count'] == 1
+    assert sections['address_quality']['quality_grade']

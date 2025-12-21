@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from reports.application.services.module_builders import ModuleBuilder
+from reports.domain.constants import REPORT_SCHEMA_VERSION
 
 
 class ReportAssembler:
@@ -18,7 +19,7 @@ class ReportAssembler:
         self,
         builders: Mapping[str, ModuleBuilder],
         *,
-        schema_version: int = 1,
+        schema_version: int = REPORT_SCHEMA_VERSION,
     ) -> None:
         """Сохранить доступные сборщики и версию схемы."""
 
