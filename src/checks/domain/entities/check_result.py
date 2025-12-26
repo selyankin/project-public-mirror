@@ -25,3 +25,4 @@ class CheckResultSnapshot:
     schema_version: int = CHECK_RESULT_SCHEMA_VERSION
     fias_payload: dict[str, Any] | None = None
     fias_debug_raw: dict[str, Any] | None = None
+    listing_payload: dict[str, Any] | None = None

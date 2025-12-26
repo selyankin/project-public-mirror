@@ -120,7 +120,7 @@ async def _fetch_report(
 def _client(app):
     """Создать httpx клиент с ASGI transport."""
 
-    transport = httpx.ASGITransport(app=app, lifespan='off')
+    transport = httpx.ASGITransport(app=app)
     return httpx.AsyncClient(
         transport=transport,
         base_url='http://test',
