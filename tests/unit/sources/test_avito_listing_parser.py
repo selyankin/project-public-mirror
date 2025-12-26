@@ -72,3 +72,20 @@ def test_parse_prefers_primary_paths_over_nested_noise() -> None:
     assert listing.price == 3_000_000
     assert listing.coords_lat == 60.0
     assert listing.coords_lon == 30.0
+
+
+def test_find_value_limits_nodes_and_returns_none():
+    """Большие структуры не должны вызывать переполнения."""
+
+    big = {'level': []}
+    current = big['level']
+    for _ in range(2000):
+        node = {'next': []}
+        current.append(node)
+        current = node['next']
+    url = ListingUrl('https://www.avito.ru/item/void')
+    with pytest.raises(ListingParseError):
+        parse_avito_listing(
+            url=url,
+            preloaded_state={'tracking': big},
+        )

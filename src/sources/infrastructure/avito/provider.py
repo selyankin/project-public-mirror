@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import httpx
@@ -24,18 +25,27 @@ from sources.infrastructure.avito import (
 class AvitoListingProvider(ListingProviderPort):
     """HTTP-провайдер объявлений Avito."""
 
-    __slots__ = ('_client', '_timeout')
+    __slots__ = ('_client_factory', '_timeout')
 
     def __init__(
         self,
         *,
-        client: httpx.Client | None = None,
+        client_factory: Callable[[], httpx.Client] | None = None,
         timeout_seconds: float = 10.0,
     ) -> None:
-        """Сохранить httpx клиент и таймаут."""
+        """Сохранить фабрику httpx клиента и таймаут."""
 
         self._timeout = timeout_seconds
-        self._client = client or httpx.Client(timeout=timeout_seconds)
+        if client_factory is None:
+            self._client_factory = lambda: httpx.Client(
+                timeout=self._timeout,
+                follow_redirects=True,
+                headers={
+                    'User-Agent': 'flaffy/avito-provider',
+                },
+            )
+        else:
+            self._client_factory = client_factory
 
     def is_supported(self, url: ListingUrl) -> bool:
         """Поддерживаются только avito.ru."""
@@ -50,10 +60,8 @@ class AvitoListingProvider(ListingProviderPort):
             raise ListingNotSupportedError('URL не принадлежит avito.ru')
 
         try:
-            response = self._client.get(
-                url.value,
-                timeout=self._timeout,
-            )
+            with self._client_factory() as client:
+                response = client.get(url.value, timeout=self._timeout)
         except (httpx.TimeoutException, httpx.RequestError) as exc:
             raise ListingFetchError(str(exc)) from exc
 

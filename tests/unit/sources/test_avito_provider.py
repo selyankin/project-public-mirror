@@ -10,17 +10,20 @@ from sources.domain.value_objects import ListingUrl
 from sources.infrastructure.avito import AvitoListingProvider
 
 
-def _build_client(html: str, status: int = 200) -> httpx.Client:
-    """Собрать httpx.Client с MockTransport."""
+def _client_factory(html: str, status: int = 200):
+    """Вернуть фабрику клиентов с MockTransport."""
 
-    def handler(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            status_code=status,
-            text=html,
-        )
+    def factory() -> httpx.Client:
+        def handler(_: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                status_code=status,
+                text=html,
+            )
 
-    transport = httpx.MockTransport(handler)
-    return httpx.Client(transport=transport)
+        transport = httpx.MockTransport(handler)
+        return httpx.Client(transport=transport)
+
+    return factory
 
 
 def test_provider_fetch_and_normalize_success(monkeypatch) -> None:
@@ -34,8 +37,7 @@ def test_provider_fetch_and_normalize_success(monkeypatch) -> None:
     "coordinates":{"latitude":55.5,"longitude":37.5}}}};
     </script>
     """
-    client = _build_client(html)
-    provider = AvitoListingProvider(client=client)
+    provider = AvitoListingProvider(client_factory=_client_factory(html))
     url = ListingUrl('https://www.avito.ru/item/1')
 
     snapshot = provider.fetch_snapshot(url)
@@ -52,8 +54,9 @@ def test_provider_fetch_and_normalize_success(monkeypatch) -> None:
 def test_provider_fetch_snapshot_bad_status() -> None:
     """HTTP != 200 вызывает ListingFetchError."""
 
-    client = _build_client('<html></html>', status=500)
-    provider = AvitoListingProvider(client=client)
+    provider = AvitoListingProvider(
+        client_factory=_client_factory('<html></html>', status=500),
+    )
     url = ListingUrl('https://www.avito.ru/item/2')
 
     with pytest.raises(ListingFetchError):

@@ -57,6 +57,7 @@ def parse_avito_listing(
         listing_id_raw = _find_value(
             preloaded_state,
             ('id', 'listingId', 'itemId'),
+            max_nodes=5000,
         )
 
     listing_id_value = _normalize_listing_id(listing_id_raw)
@@ -66,7 +67,7 @@ def parse_avito_listing(
 
     title_raw = _get_by_paths(preloaded_state, TITLE_PATHS)
     if title_raw is None:
-        title_raw = _find_value(preloaded_state, ('title',))
+        title_raw = _find_value(preloaded_state, ('title',), max_nodes=5000)
     title = str(title_raw) if title_raw is not None else None
 
     address_raw = _get_by_paths(preloaded_state, ADDRESS_PATHS)
@@ -74,6 +75,7 @@ def parse_avito_listing(
         address_raw = _find_value(
             preloaded_state,
             ('fullAddress', 'address', 'locationName'),
+            max_nodes=5000,
         )
     address = str(address_raw) if address_raw is not None else None
 
@@ -82,12 +84,13 @@ def parse_avito_listing(
         price_raw = _find_value(
             preloaded_state,
             ('price', 'priceValue', 'amount'),
+            max_nodes=5000,
         )
     price = _normalize_int(price_raw)
 
     coords = _get_by_paths(preloaded_state, COORDS_PATHS)
     if coords is None:
-        coords = _find_value(preloaded_state, ('coordinates',))
+        coords = _find_value(preloaded_state, ('coordinates',), max_nodes=5000)
     coords = coords or {}
     lat = _as_float(
         _find_value(coords, ('latitude', 'lat')),
@@ -142,13 +145,15 @@ def _find_value(
     max_depth: int = 6,
     max_nodes: int = 5000,
 ) -> Any:
-    """Найти значение по ключам с ограничением глубины."""
+    """Найти значение по ключам с ограничением глубины и узлов."""
 
     visited = 0
 
     def _inner(node: Any, depth: int) -> Any:
         nonlocal visited
-        if depth < 0 or visited >= max_nodes:
+        if depth < 0:
+            return None
+        if visited >= max_nodes:
             return None
         visited += 1
         if isinstance(node, dict):
