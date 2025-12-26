@@ -22,6 +22,7 @@ from checks.infrastructure.check_results_repo_inmemory import (
 from checks.infrastructure.fias.client_stub import StubFiasClient
 from risks.application.scoring import build_risk_card
 from sources.domain.entities import ListingNormalized
+from sources.domain.exceptions import ListingFetchError
 from sources.domain.value_objects import ListingId, ListingUrl
 
 pytestmark = pytest.mark.asyncio
@@ -58,7 +59,7 @@ class FakeAddressRiskCheckUseCase:
         return self._result
 
 
-async def test_url_without_address_uses_listing() -> None:
+async def test_url_without_address_uses_listing(monkeypatch) -> None:
     """Когда URL без query, используем листинг Avito."""
 
     listing = ListingNormalized(
@@ -68,13 +69,17 @@ async def test_url_without_address_uses_listing() -> None:
         address_text='г. Москва, ул. Тверская, 1',
     )
     listing_resolver = ListingResolverStub(listing)
+    monkeypatch.setattr(
+        'checks.application.use_cases.check_address.'
+        'get_listing_resolver_use_case',
+        lambda: listing_resolver,
+    )
     fake_risk = FakeAddressRiskCheckUseCase(listing.address_text)
     use_case = CheckAddressUseCase(
         address_risk_check_use_case=fake_risk,
         check_results_repo=InMemoryCheckResultsRepo(),
         check_cache_repo=InMemoryCheckCacheRepo(ttl_seconds=600),
         fias_client=StubFiasClient(),
-        listing_resolver_use_case=listing_resolver,
         fias_mode='stub',
         cache_version='test',
     )
@@ -84,6 +89,42 @@ async def test_url_without_address_uses_listing() -> None:
 
     assert fake_risk.called_with is not None
     assert result['check_id'] is not None
+    assert listing_resolver.calls == 1
+    assert result['listing']['listing_id'] == 'listing-1'
+    assert result['listing']['coords']['lat'] is None
     assert all(
         sig['code'] != 'url_not_supported_yet' for sig in result['signals']
+    )
+
+
+async def test_listing_error_added_on_fetch_failure(monkeypatch) -> None:
+    """Если провайдер падает, в ответе появляется listing_error."""
+
+    class ErrorResolver:
+        def execute(self, url_text: str):
+            raise ListingFetchError('boom')
+
+    resolver = ErrorResolver()
+    monkeypatch.setattr(
+        'checks.application.use_cases.check_address.'
+        'get_listing_resolver_use_case',
+        lambda: resolver,
+    )
+    use_case = CheckAddressUseCase(
+        address_risk_check_use_case=FakeAddressRiskCheckUseCase(
+            'г. Москва',
+        ),
+        check_results_repo=InMemoryCheckResultsRepo(),
+        check_cache_repo=InMemoryCheckCacheRepo(ttl_seconds=600),
+        fias_client=StubFiasClient(),
+        fias_mode='stub',
+        cache_version='test',
+    )
+
+    query = CheckQuery({'type': 'url', 'query': 'https://avito.ru/item/err'})
+    result = await use_case.execute_query(query)
+
+    assert result['listing_error'] == 'ListingFetchError'
+    assert any(
+        sig['code'] == 'url_not_supported_yet' for sig in result['signals']
     )

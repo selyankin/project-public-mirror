@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -29,10 +30,12 @@ from checks.domain.value_objects.address import (
 )
 from checks.domain.value_objects.query import CheckQuery
 from checks.domain.value_objects.url import UrlRaw
+from checks.infrastructure.listing_resolver_container import (
+    get_listing_resolver_use_case,
+)
 from risks.application.scoring import build_risk_card
 from risks.domain.entities.risk_card import RiskCard, RiskSignal
 from risks.domain.signals_catalog import get_signal_definition
-from sources.application.use_cases import ResolveListingFromUrlUseCase
 from sources.domain.entities import ListingNormalized
 from sources.domain.exceptions import (
     ListingFetchError,
@@ -53,7 +56,6 @@ class CheckAddressUseCase:
         '_fias_client',
         '_fias_mode',
         '_cache_version',
-        '_listing_resolver_use_case',
     )
 
     def __init__(
@@ -62,7 +64,6 @@ class CheckAddressUseCase:
         check_results_repo: CheckResultsRepoPort,
         check_cache_repo: CheckCacheRepoPort,
         fias_client: FiasClient,
-        listing_resolver_use_case: ResolveListingFromUrlUseCase,
         *,
         fias_mode: str,
         cache_version: str,
@@ -75,7 +76,6 @@ class CheckAddressUseCase:
         self._fias_client = fias_client
         self._fias_mode = fias_mode
         self._cache_version = cache_version
-        self._listing_resolver_use_case = listing_resolver_use_case
 
     async def execute(self, raw_query: str) -> dict[str, Any]:
         """Выполнить проверку по строке адреса (устаревший формат)."""
@@ -96,12 +96,15 @@ class CheckAddressUseCase:
         risk_result: AddressRiskCheckResult | None = None
         check_id: UUID | None = None
 
+        extras: dict[str, Any] = {}
+
         if query.type is QueryType.address:
             (
                 snapshot,
                 check_id,
                 risk_result,
                 signals,
+                extras,
             ) = await self._process_address(
                 query.query,
             )
@@ -112,6 +115,7 @@ class CheckAddressUseCase:
                 check_id,
                 risk_result,
                 signals,
+                extras,
             ) = await self._process_url(
                 query.query,
             )
@@ -123,6 +127,7 @@ class CheckAddressUseCase:
                     ('rule:query_type_not_supported',),
                 ),
             )
+            extras = {}
 
         if snapshot is not None:
             risk_card = snapshot.risk_card
@@ -137,11 +142,19 @@ class CheckAddressUseCase:
             normalized_address = None
             fias_payload = None
 
+        listing_payload = extras.get('listing')
+        listing_error = extras.get('listing_error')
+        if snapshot is not None:
+            listing_payload = snapshot.listing_payload or listing_payload
+            listing_error = snapshot.listing_error or listing_error
+
         return self._build_response(
             risk_card,
             normalized_address,
             check_id,
             fias_payload,
+            listing_payload,
+            listing_error,
         )
 
     async def _process_address(self, text: str) -> tuple[
@@ -149,6 +162,7 @@ class CheckAddressUseCase:
         UUID | None,
         AddressRiskCheckResult | None,
         tuple[RiskSignal, ...],
+        dict[str, Any],
     ]:
         """Обработать адресный запрос с учётом кэша."""
 
@@ -159,7 +173,7 @@ class CheckAddressUseCase:
                     ('heuristic:address_like',),
                 ),
             )
-            return None, None, None, signals
+            return None, None, None, signals, {}
 
         fias_payload, fias_debug_raw = await self._fetch_fias_data(text)
 
@@ -170,7 +184,7 @@ class CheckAddressUseCase:
         )
         cached = await self._get_cached_snapshot(cache_key)
         if cached:
-            return cached[0], cached[1], None, ()
+            return cached[0], cached[1], None, (), {}
 
         risk_result, signals = await self._run_address_risk_check(text)
         snapshot, check_id = await self._store_check_result(
@@ -181,13 +195,14 @@ class CheckAddressUseCase:
             fias_debug_raw=fias_debug_raw,
         )
         await self._check_cache_repo.set(cache_key, check_id)
-        return snapshot, check_id, risk_result, signals
+        return snapshot, check_id, risk_result, signals, {}
 
     async def _process_url(self, url_text: str) -> tuple[
         CheckResultSnapshot | None,
         UUID | None,
         AddressRiskCheckResult | None,
         tuple[RiskSignal, ...],
+        dict[str, Any],
     ]:
         """Обработать запрос URL и учесть кэш."""
 
@@ -198,7 +213,7 @@ class CheckAddressUseCase:
         )
         cached = await self._get_cached_snapshot(cache_key)
         if cached:
-            return cached[0], cached[1], None, ()
+            return cached[0], cached[1], None, (), {}
 
         url_vo = UrlRaw(url_text)
         extracted = extract_address_from_url(url_vo)
@@ -218,9 +233,12 @@ class CheckAddressUseCase:
                 fias_debug_raw=fias_debug_raw,
             )
             await self._check_cache_repo.set(cache_key, check_id)
-            return snapshot, check_id, risk_result, signals
+            return snapshot, check_id, risk_result, signals, {}
 
-        listing_result = self._try_resolve_listing(url_text)
+        listing_result, listing_error = await self._try_resolve_listing(
+            url_text,
+        )
+        extras: dict[str, Any] = {}
         if listing_result:
             listing_address, listing_payload = listing_result
             normalized_address_input = normalize_address_raw(
@@ -239,9 +257,14 @@ class CheckAddressUseCase:
                 fias_payload=fias_payload,
                 fias_debug_raw=fias_debug_raw,
                 listing_payload=listing_payload,
+                listing_error=None,
             )
+            extras['listing'] = listing_payload
             await self._check_cache_repo.set(cache_key, check_id)
-            return snapshot, check_id, risk_result, signals
+            return snapshot, check_id, risk_result, signals, extras
+
+        if listing_error:
+            extras['listing_error'] = listing_error
 
         signals = (
             self._build_single_signal(
@@ -249,7 +272,7 @@ class CheckAddressUseCase:
                 ('rule:url_not_supported',),
             ),
         )
-        return None, None, None, signals
+        return None, None, None, signals, extras
 
     def _build_cache_key(
         self,
@@ -282,40 +305,39 @@ class CheckAddressUseCase:
             return None
         return snapshot, entry.check_id
 
-    def _try_resolve_listing(
+    async def _try_resolve_listing(
         self,
         url_text: str,
-    ) -> tuple[str, dict[str, Any]] | None:
+    ) -> tuple[tuple[str, dict[str, Any]] | None, str | None]:
         """Попробовать извлечь адрес из листинга."""
 
+        resolver = get_listing_resolver_use_case()
         try:
-            listing = self._listing_resolver_use_case.execute(url_text)
-
-        except (
-            ListingNotSupportedError,
-            ListingFetchError,
-            ListingParseError,
-        ) as exc:
-            logger.info(
-                'listing_resolver_failed url=%s error=%s',
+            listing = await asyncio.to_thread(
+                resolver.execute,
                 url_text,
-                exc,
             )
-            return None
-
+        except ListingNotSupportedError as exc:
+            logger.info('listing_not_supported url=%s error=%s', url_text, exc)
+            return None, 'ListingNotSupportedError'
+        except (ListingFetchError, ListingParseError) as exc:
+            logger.info(
+                'listing_resolver_failed url=%s error=%s', url_text, exc
+            )
+            return None, exc.__class__.__name__
         except Exception as exc:  # pragma: no cover
             logger.warning(
                 'listing_resolver_unexpected_error url=%s error=%s',
                 url_text,
                 exc,
             )
-            return None
+            return None, 'UnexpectedError'
 
         if listing.address_text and is_address_like(listing.address_text):
             payload = self._listing_to_payload(listing)
-            return listing.address_text, payload
+            return (listing.address_text, payload), None
 
-        return None
+        return None, None
 
     @staticmethod
     def _build_response(
@@ -323,6 +345,8 @@ class CheckAddressUseCase:
         normalized_address: AddressNormalized | None,
         check_id: UUID | None,
         fias_payload: dict[str, Any] | None,
+        listing_payload: dict[str, Any] | None,
+        listing_error: str | None,
     ) -> dict[str, Any]:
         """Сформировать ответ API из риск-карты и адреса."""
 
@@ -336,6 +360,10 @@ class CheckAddressUseCase:
         result['check_id'] = check_id
         if fias_payload:
             result['fias'] = fias_payload
+        if listing_payload:
+            result['listing'] = listing_payload
+        if listing_error:
+            result['listing_error'] = listing_error
 
         return result
 
@@ -360,6 +388,7 @@ class CheckAddressUseCase:
         fias_payload: dict[str, Any] | None = None,
         fias_debug_raw: dict[str, Any] | None = None,
         listing_payload: dict[str, Any] | None = None,
+        listing_error: str | None = None,
     ) -> tuple[CheckResultSnapshot, UUID]:
         """Сохранить результирующий снимок проверки."""
 
@@ -373,6 +402,7 @@ class CheckAddressUseCase:
             fias_payload=fias_payload,
             fias_debug_raw=fias_debug_raw,
             listing_payload=listing_payload,
+            listing_error=listing_error,
         )
         check_id = await self._check_results_repo.save(snapshot)
         return snapshot, check_id
@@ -440,8 +470,10 @@ class CheckAddressUseCase:
             'title': listing.title,
             'address_text': listing.address_text,
             'price': listing.price,
-            'coords_lat': listing.coords_lat,
-            'coords_lon': listing.coords_lon,
+            'coords': {
+                'lat': listing.coords_lat,
+                'lon': listing.coords_lon,
+            },
             'area_total': listing.area_total,
             'floors_total': listing.floors_total,
         }

@@ -18,6 +18,19 @@ def test_extract_preloaded_state_returns_json() -> None:
     assert json_str == '{"foo": "bar", "nested": {"a": 1}}'
 
 
+def test_extract_preloaded_state_handles_braces_in_strings() -> None:
+    """Парсер учитывает фигурные скобки внутри строк."""
+
+    html = """
+    <script>
+    window.__preloadedState__ = {"text": "value {not closing}", "inner": {
+    "note": "brace } still string"}}   ;
+    </script>
+    """
+    json_str = extract_preloaded_state_json(html)
+    assert '"note": "brace } still string"' in json_str
+
+
 def test_extract_preloaded_state_not_found() -> None:
     """Если блока нет, поднимается ListingParseError."""
 

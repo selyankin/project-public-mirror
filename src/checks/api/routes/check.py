@@ -17,9 +17,6 @@ from checks.domain.value_objects.query import CheckQuery, QueryInputError
 from checks.infrastructure.address_resolver_factory import (
     build_address_resolver,
 )
-from checks.infrastructure.listing_resolver_factory import (
-    build_listing_resolver_use_case,
-)
 from checks.presentation.api.v1.serialization.input.checks import (
     CheckIn,
     LegacyCheckIn,
@@ -37,7 +34,6 @@ def _build_use_case(request: Request) -> CheckAddressUseCase:
     address_resolver = build_address_resolver(settings)
     signals_provider = SignalsProviderStub({})
     fias_client = getattr(request.app.state, 'fias_client', None)
-    listing_resolver_use_case = build_listing_resolver_use_case()
 
     if fias_client is None:
         raise RuntimeError('FIAS client is not configured.')
@@ -52,7 +48,6 @@ def _build_use_case(request: Request) -> CheckAddressUseCase:
         check_results_repo=check_results_repo,
         check_cache_repo=check_cache_repo,
         fias_client=fias_client,
-        listing_resolver_use_case=listing_resolver_use_case,
         fias_mode=settings.FIAS_MODE,
         cache_version=settings.CHECK_CACHE_VERSION,
     )

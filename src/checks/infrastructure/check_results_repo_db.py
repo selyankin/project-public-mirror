@@ -83,6 +83,8 @@ class CheckResultsRepoDb(CheckResultsRepoPort):
             payload['fias_debug_raw'] = snapshot.fias_debug_raw
         if snapshot.listing_payload:
             payload['listing'] = snapshot.listing_payload
+        if snapshot.listing_error:
+            payload['listing_error'] = snapshot.listing_error
         return payload
 
     @staticmethod
@@ -113,4 +115,5 @@ class CheckResultsRepoDb(CheckResultsRepoPort):
             fias_payload=payload.get('fias'),
             fias_debug_raw=payload.get('fias_debug_raw'),
             listing_payload=payload.get('listing'),
+            listing_error=payload.get('listing_error'),
         )

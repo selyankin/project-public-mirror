@@ -27,24 +27,38 @@ from checks.infrastructure.fias.client_stub import StubFiasClient
 from risks.application.scoring import build_risk_card
 from sources.domain.exceptions import ListingNotSupportedError
 
-pytestmark = pytest.mark.asyncio
-
 
 class ListingResolverStub:
     """Заглушка резолвера листингов."""
 
     def __init__(self):
+        self.listing = None
         self.calls = 0
 
     def execute(self, url_text: str):
         self.calls += 1
-        raise ListingNotSupportedError(f'stub: {url_text}')
+        if self.listing is None:
+            raise ListingNotSupportedError(url_text)
+        return self.listing
 
 
-def make_use_case(
-    fias_client: StubFiasClient | None = None,
-    listing_resolver=None,
-):
+@pytest.fixture(autouse=True)
+def listing_resolver_stub(monkeypatch):
+    """Подменить резолвер листингов на заглушку."""
+
+    stub = ListingResolverStub()
+    monkeypatch.setattr(
+        'checks.application.use_cases.check_address.'
+        'get_listing_resolver_use_case',
+        lambda: stub,
+    )
+    return stub
+
+
+pytestmark = pytest.mark.asyncio
+
+
+def make_use_case(fias_client: StubFiasClient | None = None):
     address_resolver = AddressResolverStub({})
     signals_provider = SignalsProviderStub({})
     address_risk_use_case = AddressRiskCheckUseCase(
@@ -58,7 +72,6 @@ def make_use_case(
         check_results_repo=check_results_repo,
         check_cache_repo=check_cache_repo,
         fias_client=fias_client or StubFiasClient(),
-        listing_resolver_use_case=listing_resolver or ListingResolverStub(),
         fias_mode='stub',
         cache_version='test',
     )
@@ -199,7 +212,6 @@ async def test_address_path_uses_address_risk_use_case():
         check_results_repo=DummyRepo(),
         check_cache_repo=DummyCacheRepo(),
         fias_client=StubFiasClient(),
-        listing_resolver_use_case=ListingResolverStub(),
         fias_mode='stub',
         cache_version='test',
     )

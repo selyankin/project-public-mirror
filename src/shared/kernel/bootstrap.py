@@ -8,6 +8,9 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from sqlalchemy import text
 
 from checks.api.routes.check import router as check_router
+from checks.infrastructure.listing_resolver_container import (
+    close_listing_resolver_container,
+)
 from reports.api.routes import router as reports_router
 from shared.kernel.db import create_engine, create_sessionmaker, session_scope
 from shared.kernel.fias_client_factory import get_fias_client
@@ -87,6 +90,7 @@ def create_app() -> FastAPI:
             if fias_http_client is not None:
                 await fias_http_client.aclose()
             await engine.dispose()
+            close_listing_resolver_container()
             logger.info('app_shutdown')
 
     app = FastAPI(

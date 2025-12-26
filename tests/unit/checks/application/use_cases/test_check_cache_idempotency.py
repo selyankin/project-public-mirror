@@ -25,6 +25,27 @@ from checks.infrastructure.fias.client_stub import StubFiasClient
 from risks.application.scoring import build_risk_card
 from sources.domain.exceptions import ListingNotSupportedError
 
+
+class ListingResolverStub:
+    """Всегда сообщает, что URL не поддерживается."""
+
+    def execute(self, url_text: str):
+        raise ListingNotSupportedError(url_text)
+
+
+@pytest.fixture(autouse=True)
+def listing_resolver_stub(monkeypatch):
+    """Подменить резолвер листингов на заглушку."""
+
+    stub = ListingResolverStub()
+    monkeypatch.setattr(
+        'checks.application.use_cases.check_address.'
+        'get_listing_resolver_use_case',
+        lambda: stub,
+    )
+    return stub
+
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -62,13 +83,6 @@ class FakeAddressRiskCheckUseCase:
         return self._result
 
 
-class ListingResolverStub:
-    """Всегда сообщает, что URL не поддерживается."""
-
-    def execute(self, url_text: str):
-        raise ListingNotSupportedError(url_text)
-
-
 async def test_idempotent_behavior_returns_same_check_id() -> None:
     """Повторный запрос в пределах TTL не вызывает риск-движок."""
 
@@ -79,7 +93,6 @@ async def test_idempotent_behavior_returns_same_check_id() -> None:
         check_results_repo=InMemoryCheckResultsRepo(),
         check_cache_repo=InMemoryCheckCacheRepo(ttl_seconds=600, now_fn=clock),
         fias_client=StubFiasClient(),
-        listing_resolver_use_case=ListingResolverStub(),
         fias_mode='stub',
         cache_version='test',
     )
@@ -102,7 +115,6 @@ async def test_cache_expires_after_ttl() -> None:
         check_results_repo=InMemoryCheckResultsRepo(),
         check_cache_repo=InMemoryCheckCacheRepo(ttl_seconds=1, now_fn=clock),
         fias_client=StubFiasClient(),
-        listing_resolver_use_case=ListingResolverStub(),
         fias_mode='stub',
         cache_version='test',
     )

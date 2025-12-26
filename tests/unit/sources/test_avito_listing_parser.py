@@ -44,3 +44,31 @@ def test_parse_avito_listing_missing_id_raises() -> None:
 
     with pytest.raises(ListingParseError):
         parse_avito_listing(url=url, preloaded_state=preloaded)
+
+
+def test_parse_prefers_primary_paths_over_nested_noise() -> None:
+    """Основные пути берут нужные значения несмотря на шум."""
+
+    url = ListingUrl('https://www.avito.ru/item/789')
+    preloaded = {
+        'tracking': {
+            'id': 'noise',
+            'price': 0,
+        },
+        'data': {
+            'item': {
+                'id': 'PRIMARY-789',
+                'title': 'Дом 100 м²',
+                'fullAddress': 'Санкт-Петербург, ул. Пушкина',
+                'price': {'value': '3 000 000 ₽'},
+                'coordinates': {'latitude': 60.0, 'longitude': 30.0},
+            },
+        },
+    }
+
+    listing = parse_avito_listing(url=url, preloaded_state=preloaded)
+
+    assert listing.listing_id.value == 'PRIMARY-789'
+    assert listing.price == 3_000_000
+    assert listing.coords_lat == 60.0
+    assert listing.coords_lon == 30.0
