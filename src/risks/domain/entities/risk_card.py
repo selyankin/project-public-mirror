@@ -45,7 +45,7 @@ class RiskSignal:
         if value is None:
             refs = ()
 
-        elif isinstance(value, list | tuple):
+        elif isinstance(value, (list, tuple)):
             cleaned = []
             for idx, item in enumerate(value):
                 cleaned.append(
@@ -116,7 +116,7 @@ class RiskCard:
         if value is None:
             return ()
 
-        if not isinstance(value, list | tuple):
+        if not isinstance(value, (list, tuple)):
             raise RiskDomainError('signals must be a list or tuple.')
 
         normalized = []

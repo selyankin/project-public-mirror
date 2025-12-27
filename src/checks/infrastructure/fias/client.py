@@ -329,7 +329,7 @@ def _bool_field(payload: dict[str, Any], keys: tuple[str, ...]) -> bool | None:
             if lowered in {'false', '0', 'no'}:
                 return False
 
-        if isinstance(value, int | float):
+        if isinstance(value, (int, float)):
             return bool(value)
 
     return None

@@ -55,7 +55,7 @@ def _severity(raw: Any) -> str:
             return 'warning'
         return 'info'
 
-    if isinstance(raw, int | float):
+    if isinstance(raw, (int, float)):
         value = float(raw)
         if value >= 70:
             return 'critical'

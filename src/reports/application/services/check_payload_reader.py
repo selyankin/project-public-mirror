@@ -62,7 +62,7 @@ class CheckPayloadReader:
             return None
 
         value = risk_card.get('score')
-        if isinstance(value, int | float):
+        if isinstance(value, (int, float)):
             return value
 
         try:

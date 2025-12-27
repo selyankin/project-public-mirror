@@ -53,6 +53,7 @@ lint.select = [
 ]
 lint.ignore = [
     'B008', # FastAPI Depends()
+    'UP038',
 ]
 
 [tool.mypy]

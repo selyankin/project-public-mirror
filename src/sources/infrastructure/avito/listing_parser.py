@@ -206,7 +206,7 @@ def _normalize_int(value: Any) -> int | None:
 def _as_float(value: Any) -> float | None:
     """Безопасное приведение к float."""
 
-    if isinstance(value, int | float):
+    if isinstance(value, (int, float)):
         return float(value)
 
     if isinstance(value, str):

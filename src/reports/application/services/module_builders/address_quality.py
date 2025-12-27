@@ -57,7 +57,7 @@ def _extract_confidence(
     if raw is None:
         raw = normalized.get('confidence')
 
-    if isinstance(raw, int | float):
+    if isinstance(raw, (int, float)):
         return float(raw)
 
     if isinstance(raw, str):
