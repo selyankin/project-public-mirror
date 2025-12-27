@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime
 from random import uniform
 from time import perf_counter
 from typing import Any
@@ -225,6 +226,47 @@ class ApiFiasClient:
             fias_id=fias_id,
             confidence=confidence,
             raw=payload,
+            fias_houseguid=_first(
+                payload,
+                (
+                    'houseguid',
+                    'house_guid',
+                    'house_guid_fias',
+                    'object_guid',
+                ),
+            ),
+            fias_aoguid=_first(
+                payload,
+                ('aoguid', 'ao_guid', 'aoguid_fias'),
+            ),
+            gar_house_id=_first(payload, ('gar_house_id',)),
+            gar_object_id=_first(payload, ('gar_object_id',)),
+            postal_code=_first(
+                payload,
+                ('postalcode', 'postal_code', 'post_index', 'zip'),
+            ),
+            oktmo=_first(payload, ('oktmo',)),
+            okato=_first(payload, ('okato',)),
+            region_code=_first(
+                payload,
+                ('regioncode', 'region_code'),
+            ),
+            cadastral_number=_first(
+                payload,
+                ('cadnum', 'cadastral_number', 'cadastral'),
+            ),
+            status=_first(
+                payload,
+                ('status', 'livestatus'),
+            ),
+            is_active=_bool_field(
+                payload,
+                ('livestatus', 'is_active', 'active'),
+            ),
+            updated_at=_parse_datetime(
+                payload,
+                ('updatedate', 'update_date', 'updated_at'),
+            ),
         )
 
     @staticmethod
@@ -258,3 +300,63 @@ class ApiFiasClient:
         """Определить, стоит ли повторять запрос по статусу."""
 
         return status in {429, 500, 502, 503, 504}
+
+
+def _first(payload: dict[str, Any], keys: tuple[str, ...]) -> str | None:
+    """Вернуть первое значение по списку ключей."""
+
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+
+    return None
+
+
+def _bool_field(payload: dict[str, Any], keys: tuple[str, ...]) -> bool | None:
+    """Преобразовать значение в булевый тип."""
+
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            lowered = value.lower()
+            if lowered in {'true', '1', 'yes'}:
+                return True
+
+            if lowered in {'false', '0', 'no'}:
+                return False
+
+        if isinstance(value, int | float):
+            return bool(value)
+
+    return None
+
+
+def _parse_datetime(
+    payload: dict[str, Any],
+    keys: tuple[str, ...],
+) -> datetime | None:
+    """Попробовать распарсить дату обновления."""
+
+    for key in keys:
+        value = payload.get(key)
+        if not value:
+            continue
+
+        if isinstance(value, datetime):
+            return value if value.tzinfo else value.replace(tzinfo=UTC)
+
+        if isinstance(value, str):
+            try:
+                parsed = datetime.fromisoformat(value)
+            except ValueError:
+                continue
+
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=UTC)
+            return parsed
+
+    return None

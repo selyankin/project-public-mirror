@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -13,36 +12,14 @@ from sources.domain.services import (
     parse_floors_total,
 )
 from sources.domain.value_objects import ListingId, ListingUrl
-
-ID_PATTERN = re.compile(r'^[a-zA-Z0-9\-_]+$')
-LISTING_ID_PATHS: list[list[str]] = [
-    ['data', 'item', 'id'],
-    ['item', 'id'],
-    ['listing', 'id'],
-    ['ad', 'id'],
-    ['itemInfo', 'id'],
-]
-TITLE_PATHS: list[list[str]] = [
-    ['data', 'item', 'title'],
-    ['item', 'title'],
-    ['seo', 'title'],
-]
-ADDRESS_PATHS: list[list[str]] = [
-    ['data', 'item', 'fullAddress'],
-    ['item', 'address'],
-    ['item', 'locationName'],
-]
-PRICE_PATHS: list[list[str]] = [
-    ['data', 'item', 'price', 'value'],
-    ['item', 'price', 'value'],
-    ['item', 'price'],
-    ['seo', 'price'],
-]
-COORDS_PATHS: list[list[str]] = [
-    ['data', 'item', 'coordinates'],
-    ['item', 'coordinates'],
-    ['location', 'coords'],
-]
+from sources.infrastructure.avito.constants.parser import (
+    ADDRESS_PATHS,
+    COORDS_PATHS,
+    ID_PATTERN,
+    LISTING_ID_PATHS,
+    PRICE_PATHS,
+    TITLE_PATHS,
+)
 
 
 def parse_avito_listing(
@@ -91,6 +68,7 @@ def parse_avito_listing(
     coords = _get_by_paths(preloaded_state, COORDS_PATHS)
     if coords is None:
         coords = _find_value(preloaded_state, ('coordinates',), max_nodes=5000)
+
     coords = coords or {}
     lat = _as_float(
         _find_value(coords, ('latitude', 'lat')),
@@ -129,12 +107,16 @@ def _get_by_paths(
             if not isinstance(current, dict):
                 matched = False
                 break
+
             if key not in current:
                 matched = False
                 break
+
             current = current[key]
+
         if matched:
             return current
+
     return None
 
 
@@ -153,22 +135,27 @@ def _find_value(
         nonlocal visited
         if depth < 0:
             return None
+
         if visited >= max_nodes:
             return None
+
         visited += 1
         if isinstance(node, dict):
             for key in keys:
                 if key in node:
                     return node[key]
+
             for value in node.values():
                 found = _inner(value, depth - 1)
                 if found is not None:
                     return found
+
         elif isinstance(node, list):
             for item in node:
                 found = _inner(item, depth - 1)
                 if found is not None:
                     return found
+
         return None
 
     return _inner(data, max_depth)
@@ -183,8 +170,10 @@ def _normalize_listing_id(value: Any) -> str | None:
         trimmed = value.strip()
         if not trimmed:
             return None
+
         if trimmed.isdigit() or ID_PATTERN.match(trimmed):
             return trimmed
+
     return None
 
 

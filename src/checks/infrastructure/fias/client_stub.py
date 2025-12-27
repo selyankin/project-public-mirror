@@ -28,6 +28,10 @@ class StubFiasClient:
                 'matched': normalized['normalized'],
                 'rule': normalized['rule'],
             },
+            fias_houseguid=normalized.get('fias_houseguid'),
+            fias_aoguid=normalized.get('fias_aoguid'),
+            postal_code=normalized.get('postal_code'),
+            region_code=normalized.get('region_code'),
         )
 
     @staticmethod
@@ -39,6 +43,10 @@ class StubFiasClient:
                 'fias_id': 'moscow-001',
                 'confidence': 0.95,
                 'rule': 'contains:москва',
+                'fias_houseguid': 'moscow-house-001',
+                'fias_aoguid': 'moscow-ao-001',
+                'postal_code': '101000',
+                'region_code': '77',
             }
 
         if 'санкт-петербург' in lowered or 'спб' in lowered:
@@ -47,6 +55,9 @@ class StubFiasClient:
                 'fias_id': 'spb-010',
                 'confidence': 0.9,
                 'rule': 'contains:spb',
+                'fias_houseguid': 'spb-house-010',
+                'postal_code': '190000',
+                'region_code': '78',
             }
 
         return None

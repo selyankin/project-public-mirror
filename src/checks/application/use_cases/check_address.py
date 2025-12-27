@@ -15,7 +15,7 @@ from checks.application.ports.checks import (
     CheckCacheRepoPort,
     CheckResultsRepoPort,
 )
-from checks.application.ports.fias_client import FiasClient
+from checks.application.ports.fias_client import FiasClient, NormalizedAddress
 from checks.application.use_cases.address_risk_check import (
     AddressRiskCheckResult,
     AddressRiskCheckUseCase,
@@ -36,6 +36,7 @@ from checks.infrastructure.listing_resolver_container import (
 from risks.application.scoring import build_risk_card
 from risks.domain.entities.risk_card import RiskCard, RiskSignal
 from risks.domain.signals_catalog import get_signal_definition
+from shared.domain.entities import HouseKey
 from sources.domain.entities import ListingNormalized
 from sources.domain.exceptions import (
     ListingFetchError,
@@ -433,7 +434,54 @@ class CheckAddressUseCase:
             'fias_id': normalized.fias_id,
             'confidence': normalized.confidence,
         }
+        house_payload = self._build_house_payload(normalized)
+        if house_payload:
+            public_payload['house'] = house_payload
         return public_payload, normalized.raw
+
+    @staticmethod
+    def _build_house_payload(dto: NormalizedAddress) -> dict[str, Any] | None:
+        """Собрать публичный payload идентификаторов дома."""
+
+        try:
+            house_key = HouseKey.build(
+                fias_houseguid=dto.fias_houseguid,
+                gar_house_id=dto.gar_house_id,
+                gar_object_id=dto.gar_object_id,
+            )
+            house_key_value = house_key.value
+        except ValueError:
+            house_key_value = None
+
+        payload: dict[str, Any] = {}
+        if house_key_value:
+            payload['house_key'] = house_key_value
+        if dto.fias_houseguid:
+            payload['fias_houseguid'] = dto.fias_houseguid
+        if dto.fias_aoguid:
+            payload['fias_aoguid'] = dto.fias_aoguid
+        if dto.gar_house_id:
+            payload['gar_house_id'] = dto.gar_house_id
+        if dto.gar_object_id:
+            payload['gar_object_id'] = dto.gar_object_id
+        if dto.postal_code:
+            payload['postal_code'] = dto.postal_code
+        if dto.oktmo:
+            payload['oktmo'] = dto.oktmo
+        if dto.okato:
+            payload['okato'] = dto.okato
+        if dto.region_code:
+            payload['region_code'] = dto.region_code
+        if dto.cadastral_number:
+            payload['cadastral_number'] = dto.cadastral_number
+        if dto.status:
+            payload['status'] = dto.status
+        if dto.is_active is not None:
+            payload['is_active'] = dto.is_active
+        if dto.updated_at is not None:
+            payload['updated_at'] = dto.updated_at.isoformat()
+
+        return payload or None
 
     @staticmethod
     def _sanitize_input_value(value: str) -> str:

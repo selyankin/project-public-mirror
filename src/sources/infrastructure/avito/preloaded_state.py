@@ -31,25 +31,33 @@ def _extract_braced_object(text: str, start_idx: int) -> str:
     depth = 0
     in_string = False
     escaped = False
+
     for idx in range(start_idx, len(text)):
         char = text[idx]
         if in_string:
             if escaped:
                 escaped = False
                 continue
+
             if char == '\\':
                 escaped = True
                 continue
+
             if char == '"':
                 in_string = False
+
             continue
+
         if char == '"':
             in_string = True
             continue
+
         if char == '{':
             depth += 1
+
         elif char == '}':
             depth -= 1
             if depth == 0:
                 return text[start_idx : idx + 1]
+
     raise ListingParseError('unterminated preloaded state json')
