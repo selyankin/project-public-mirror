@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from risks.domain.value_objects.risk_signal import SimpleRiskSignal
+from risks.domain.constants.enums.risk import SignalSeverity
+from risks.domain.entities.risk_card import RiskSignal
 from sources.rosreestr.models import RosreestrHouseNormalized
 
 
@@ -13,11 +14,11 @@ def build_rosreestr_signals(
     rosreestr: RosreestrHouseNormalized,
     listing_area_total: float | None,
     listing_floors_total: int | None,
-) -> list[SimpleRiskSignal]:
+) -> list[RiskSignal]:
     """Построить список сигналов для данных Росреестра."""
 
     _ = listing_floors_total
-    signals: list[SimpleRiskSignal] = []
+    signals: list[RiskSignal] = []
     _extend(signals, _build_actual_status_signal(rosreestr))
     _extend(signals, _build_encumbrance_signal(rosreestr))
     _extend(
@@ -34,22 +35,22 @@ def build_rosreestr_signals(
 
 def _build_actual_status_signal(
     rosreestr: RosreestrHouseNormalized,
-) -> SimpleRiskSignal | None:
+) -> RiskSignal | None:
 
     status = rosreestr.is_actual
     if status is True:
-        return SimpleRiskSignal(
+        return _make_signal(
             code='rosreestr_actual',
-            level='good',
             title='Сведения Росреестра актуальны',
+            level='good',
             details={'is_actual': True},
         )
 
     if status is False:
-        return SimpleRiskSignal(
+        return _make_signal(
             code='rosreestr_not_actual',
-            level='warning',
             title='Сведения Росреестра неактуальны',
+            level='warning',
             details={'is_actual': False},
         )
 
@@ -58,16 +59,16 @@ def _build_actual_status_signal(
 
 def _build_encumbrance_signal(
     rosreestr: RosreestrHouseNormalized,
-) -> SimpleRiskSignal | None:
+) -> RiskSignal | None:
 
     count = rosreestr.encumbrances_count
     if count is None or count <= 0:
         return None
 
-    return SimpleRiskSignal(
+    return _make_signal(
         code='rosreestr_encumbrances',
-        level='warning',
         title='Объект обременён',
+        level='warning',
         details={'encumbrances_count': count},
     )
 
@@ -75,7 +76,7 @@ def _build_encumbrance_signal(
 def _build_area_signal(
     rosreestr_area: float | None,
     listing_area: float | None,
-) -> SimpleRiskSignal | None:
+) -> RiskSignal | None:
 
     if rosreestr_area is None or rosreestr_area <= 0:
         return None
@@ -91,46 +92,77 @@ def _build_area_signal(
     }
 
     if delta >= 0.15:
-        return SimpleRiskSignal(
+        return _make_signal(
             code='area_mismatch',
-            level='warning',
             title='Площадь объявления отличается от Росреестра',
+            level='warning',
             details=details,
         )
 
-    return SimpleRiskSignal(
+    return _make_signal(
         code='area_match',
-        level='info',
         title='Площадь объявления близка к Росреестру',
+        level='info',
         details=details,
     )
 
 
 def _build_cad_cost_signal(
     rosreestr: RosreestrHouseNormalized,
-) -> SimpleRiskSignal | None:
+) -> RiskSignal | None:
 
     if rosreestr.cadastral_value is None:
         return None
 
-    return SimpleRiskSignal(
+    return _make_signal(
         code='cad_cost_present',
-        level='info',
         title='Доступна кадастровая стоимость',
+        level='info',
         details={'cadastral_value': rosreestr.cadastral_value},
     )
 
 
+def _make_signal(
+    *,
+    code: str,
+    title: str,
+    level: str,
+    details: dict[str, object],
+) -> RiskSignal:
+
+    severity = _severity_from_level(level)
+    return RiskSignal(
+        {
+            'code': code,
+            'title': title,
+            'description': title,
+            'severity': int(severity),
+            'evidence_refs': [],
+            'level': level,
+            'details': details,
+        }
+    )
+
+
+def _severity_from_level(level: str) -> SignalSeverity:
+    mapping = {
+        'good': SignalSeverity.info,
+        'info': SignalSeverity.info,
+        'warning': SignalSeverity.low,
+    }
+    return mapping.get(level, SignalSeverity.info)
+
+
 def _extend(
-    target: list[SimpleRiskSignal],
-    items: SimpleRiskSignal | Iterable[SimpleRiskSignal] | None,
+    target: list[RiskSignal],
+    items: RiskSignal | Iterable[RiskSignal] | None,
 ) -> None:
     """Добавить в список сигналов новые элементы."""
 
     if items is None:
         return
 
-    if isinstance(items, SimpleRiskSignal):
+    if isinstance(items, RiskSignal):
         target.append(items)
         return
 

@@ -99,7 +99,7 @@ async def test_rosreestr_payload_contains_house(monkeypatch):
 
     result = await use_case.execute('г. Москва, ул. Тверская, д. 1')
 
-    rosreestr = result['fias']['rosreestr']
+    rosreestr = result['sources']['rosreestr']
     assert rosreestr['found'] is True
     assert rosreestr['error'] is None
     assert rosreestr['house']['cad_number'] == '77:01:000101:1'
@@ -114,7 +114,7 @@ async def test_rosreestr_payload_handles_not_found(monkeypatch):
 
     result = await use_case.execute('г. Москва, ул. Тверская, д. 1')
 
-    rosreestr = result['fias']['rosreestr']
+    rosreestr = result['sources']['rosreestr']
     assert rosreestr['found'] is False
     assert rosreestr['house'] is None
     assert rosreestr['error'] is None

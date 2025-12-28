@@ -27,3 +27,4 @@ class CheckResultSnapshot:
     fias_debug_raw: dict[str, Any] | None = None
     listing_payload: dict[str, Any] | None = None
     listing_error: str | None = None
+    sources_payload: dict[str, Any] | None = None

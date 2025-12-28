@@ -107,7 +107,7 @@ async def test_rosreestr_area_mismatch_signal(monkeypatch):
     query = CheckQuery({'type': 'url', 'query': 'https://avito.ru/item'})
     result = await use_case.execute_query(query)
 
-    signals = result['fias']['rosreestr']['signals']
+    signals = result['sources']['rosreestr']['signals']
     codes = {signal['code'] for signal in signals}
     assert 'area_mismatch' in codes
 
@@ -120,6 +120,6 @@ async def test_rosreestr_area_match_signal(monkeypatch):
     query = CheckQuery({'type': 'url', 'query': 'https://avito.ru/item'})
     result = await use_case.execute_query(query)
 
-    signals = result['fias']['rosreestr']['signals']
+    signals = result['sources']['rosreestr']['signals']
     codes = {signal['code'] for signal in signals}
     assert 'area_match' in codes

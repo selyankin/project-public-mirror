@@ -155,9 +155,11 @@ class CheckAddressUseCase:
 
         listing_payload = extras.get('listing')
         listing_error = extras.get('listing_error')
+        sources_payload = extras.get('sources')
         if snapshot is not None:
             listing_payload = snapshot.listing_payload or listing_payload
             listing_error = snapshot.listing_error or listing_error
+            sources_payload = snapshot.sources_payload or sources_payload
 
         return self._build_response(
             risk_card,
@@ -166,6 +168,7 @@ class CheckAddressUseCase:
             fias_payload,
             listing_payload,
             listing_error,
+            sources_payload,
         )
 
     async def _process_address(self, text: str) -> tuple[
@@ -186,10 +189,23 @@ class CheckAddressUseCase:
             )
             return None, None, None, signals, {}
 
-        fias_payload, fias_debug_raw, rosreestr_house = (
-            await self._fetch_fias_data(text)
+        (
+            fias_payload,
+            fias_debug_raw,
+            rosreestr_house,
+            rosreestr_payload,
+        ) = await self._fetch_fias_data(text)
+        self._apply_rosreestr_signals(
+            rosreestr_payload,
+            rosreestr_house,
+            None,
         )
-        self._apply_rosreestr_signals(fias_payload, rosreestr_house, None)
+        sources_payload = (
+            {'rosreestr': rosreestr_payload} if rosreestr_payload else None
+        )
+        extras: dict[str, Any] = {}
+        if sources_payload:
+            extras['sources'] = sources_payload
 
         normalized_input = normalize_address_raw(text).value
         cache_key = self._build_cache_key(
@@ -198,7 +214,7 @@ class CheckAddressUseCase:
         )
         cached = await self._get_cached_snapshot(cache_key)
         if cached:
-            return cached[0], cached[1], None, (), {}
+            return cached[0], cached[1], None, (), extras
 
         risk_result, signals = await self._run_address_risk_check(text)
         snapshot, check_id = await self._store_check_result(
@@ -207,9 +223,10 @@ class CheckAddressUseCase:
             kind='address',
             fias_payload=fias_payload,
             fias_debug_raw=fias_debug_raw,
+            sources_payload=sources_payload,
         )
         await self._check_cache_repo.set(cache_key, check_id)
-        return snapshot, check_id, risk_result, signals, {}
+        return snapshot, check_id, risk_result, signals, extras
 
     async def _process_url(self, url_text: str) -> tuple[
         CheckResultSnapshot | None,
@@ -233,14 +250,23 @@ class CheckAddressUseCase:
         extracted = extract_address_from_url(url_vo)
         if extracted and is_address_like(extracted):
             normalized_address_input = normalize_address_raw(extracted).value
-            fias_payload, fias_debug_raw, rosreestr_house = (
-                await self._fetch_fias_data(extracted)
-            )
-            self._apply_rosreestr_signals(
+            (
                 fias_payload,
+                fias_debug_raw,
+                rosreestr_house,
+                rosreestr_payload,
+            ) = await self._fetch_fias_data(extracted)
+            self._apply_rosreestr_signals(
+                rosreestr_payload,
                 rosreestr_house,
                 None,
             )
+            sources_payload = (
+                {'rosreestr': rosreestr_payload} if rosreestr_payload else None
+            )
+            extras = {}
+            if sources_payload:
+                extras['sources'] = sources_payload
             risk_result, signals = await self._run_address_risk_check(
                 extracted,
             )
@@ -250,9 +276,10 @@ class CheckAddressUseCase:
                 kind='url',
                 fias_payload=fias_payload,
                 fias_debug_raw=fias_debug_raw,
+                sources_payload=sources_payload,
             )
             await self._check_cache_repo.set(cache_key, check_id)
-            return snapshot, check_id, risk_result, signals, {}
+            return snapshot, check_id, risk_result, signals, extras
 
         listing_result, listing_error = await self._try_resolve_listing(
             url_text,
@@ -263,13 +290,19 @@ class CheckAddressUseCase:
             normalized_address_input = normalize_address_raw(
                 listing_address,
             ).value
-            fias_payload, fias_debug_raw, rosreestr_house = (
-                await self._fetch_fias_data(listing_address)
-            )
-            self._apply_rosreestr_signals(
+            (
                 fias_payload,
+                fias_debug_raw,
+                rosreestr_house,
+                rosreestr_payload,
+            ) = await self._fetch_fias_data(listing_address)
+            self._apply_rosreestr_signals(
+                rosreestr_payload,
                 rosreestr_house,
                 listing_payload,
+            )
+            sources_payload = (
+                {'rosreestr': rosreestr_payload} if rosreestr_payload else None
             )
             risk_result, signals = await self._run_address_risk_check(
                 listing_address,
@@ -282,8 +315,11 @@ class CheckAddressUseCase:
                 fias_debug_raw=fias_debug_raw,
                 listing_payload=listing_payload,
                 listing_error=None,
+                sources_payload=sources_payload,
             )
             extras['listing'] = listing_payload
+            if sources_payload:
+                extras['sources'] = sources_payload
             await self._check_cache_repo.set(cache_key, check_id)
             return snapshot, check_id, risk_result, signals, extras
 
@@ -371,6 +407,7 @@ class CheckAddressUseCase:
         fias_payload: dict[str, Any] | None,
         listing_payload: dict[str, Any] | None,
         listing_error: str | None,
+        sources_payload: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Сформировать ответ API из риск-карты и адреса."""
 
@@ -388,6 +425,8 @@ class CheckAddressUseCase:
             result['listing'] = listing_payload
         if listing_error:
             result['listing_error'] = listing_error
+        if sources_payload:
+            result['sources'] = sources_payload
 
         return result
 
@@ -413,6 +452,7 @@ class CheckAddressUseCase:
         fias_debug_raw: dict[str, Any] | None = None,
         listing_payload: dict[str, Any] | None = None,
         listing_error: str | None = None,
+        sources_payload: dict[str, Any] | None = None,
     ) -> tuple[CheckResultSnapshot, UUID]:
         """Сохранить результирующий снимок проверки."""
 
@@ -427,6 +467,7 @@ class CheckAddressUseCase:
             fias_debug_raw=fias_debug_raw,
             listing_payload=listing_payload,
             listing_error=listing_error,
+            sources_payload=sources_payload,
         )
         check_id = await self._check_results_repo.save(snapshot)
         return snapshot, check_id
@@ -438,6 +479,7 @@ class CheckAddressUseCase:
         dict[str, Any] | None,
         dict[str, Any] | None,
         RosreestrHouseNormalized | None,
+        dict[str, Any] | None,
     ]:
         """Получить нормализацию из ФИАС и Росреестра."""
 
@@ -450,10 +492,10 @@ class CheckAddressUseCase:
                 query[:80],
                 exc,
             )
-            return None, None, None
+            return None, None, None, None
 
         if normalized is None:
-            return None, None, None
+            return None, None, None, None
 
         public_payload = {
             'source_query': normalized.source_query,
@@ -465,16 +507,20 @@ class CheckAddressUseCase:
         if house_payload:
             public_payload['house'] = house_payload
 
-        rosreestr_payload, rosreestr_house = (
-            await self._build_rosreestr_payload(
-                house_payload,
-                normalized.cadastral_number,
-            )
+        (
+            rosreestr_payload,
+            rosreestr_house,
+        ) = await self._build_rosreestr_payload(
+            house_payload,
+            normalized.cadastral_number,
         )
-        if rosreestr_payload:
-            public_payload['rosreestr'] = rosreestr_payload
 
-        return public_payload, normalized.raw, rosreestr_house
+        return (
+            public_payload,
+            normalized.raw,
+            rosreestr_house,
+            rosreestr_payload,
+        )
 
     @staticmethod
     def _build_house_payload(dto: NormalizedAddress) -> dict[str, Any] | None:
@@ -584,17 +630,13 @@ class CheckAddressUseCase:
 
     def _apply_rosreestr_signals(
         self,
-        fias_payload: dict[str, Any] | None,
+        rosreestr_payload: dict[str, Any] | None,
         rosreestr_house: RosreestrHouseNormalized | None,
         listing_payload: dict[str, Any] | None,
     ) -> None:
         """Добавить сигналы Росреестра к payload."""
 
-        if not fias_payload:
-            return
-
-        block = fias_payload.get('rosreestr')
-        if not block:
+        if not rosreestr_payload:
             return
 
         listing_area = (
@@ -604,7 +646,7 @@ class CheckAddressUseCase:
             listing_payload.get('floors_total') if listing_payload else None
         )
         if rosreestr_house is None:
-            block.setdefault('signals', [])
+            rosreestr_payload.setdefault('signals', [])
             return
 
         signals = build_rosreestr_signals(
@@ -612,7 +654,7 @@ class CheckAddressUseCase:
             listing_area_total=listing_area,
             listing_floors_total=listing_floors,
         )
-        block['signals'] = [signal.to_dict() for signal in signals]
+        rosreestr_payload['signals'] = [signal.to_dict() for signal in signals]
 
     @staticmethod
     def _rosreestr_house_to_payload(
