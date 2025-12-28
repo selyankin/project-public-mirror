@@ -14,8 +14,3 @@ class RosreestrClientPort(Protocol):
         """Вернуть данные по кадастровому номеру."""
 
         raise NotImplementedError
-
-    def find_cadastrals(self, *, address: str) -> list[str]:
-        """Найти кадастровые номера по адресу."""
-
-        raise NotImplementedError

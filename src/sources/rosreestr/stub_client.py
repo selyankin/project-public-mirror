@@ -23,11 +23,3 @@ class StubRosreestrClient(RosreestrClientPort):
             )
 
         return RosreestrApiResponse(status=200, found=False, object=None)
-
-    def find_cadastrals(self, *, address: str) -> list[str]:
-        """Возвращает список кадастров, если адрес непустой."""
-
-        if address.strip():
-            return list(ROSREESTR_FIXTURE.keys())
-
-        return []

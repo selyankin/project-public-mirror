@@ -7,9 +7,11 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 
-def _get_str(data: dict[str, Any], key: str) -> str | None:
-    value = data.get(key)
-    return str(value) if isinstance(value, str) and value else None
+def _to_str(value: object | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 @dataclass(slots=True)
@@ -21,9 +23,9 @@ class RosreestrMainCharactersDto:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RosreestrMainCharactersDto:
         return cls(
-            description=_get_str(data, 'description'),
-            value=_get_str(data, 'value'),
-            unitDescription=_get_str(data, 'unitDescription'),
+            description=_to_str(data.get('description')),
+            value=_to_str(data.get('value')),
+            unitDescription=_to_str(data.get('unitDescription')),
         )
 
 
@@ -35,8 +37,8 @@ class RosreestrPermittedUseDto:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RosreestrPermittedUseDto:
         return cls(
-            classifier_code=_get_str(data, 'classifier_code'),
-            transcript=_get_str(data, 'transcript'),
+            classifier_code=_to_str(data.get('classifier_code')),
+            transcript=_to_str(data.get('transcript')),
         )
 
 
@@ -49,9 +51,9 @@ class RosreestrEncumbranceDto:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RosreestrEncumbranceDto:
         return cls(
-            typeDesc=_get_str(data, 'typeDesc'),
-            rightNumber=_get_str(data, 'rightNumber'),
-            startDate=_get_str(data, 'startDate'),
+            typeDesc=_to_str(data.get('typeDesc')),
+            rightNumber=_to_str(data.get('rightNumber')),
+            startDate=_to_str(data.get('startDate')),
         )
 
 
@@ -66,11 +68,11 @@ class RosreestrRightDto:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RosreestrRightDto:
         return cls(
-            rightTypeDesc=_get_str(data, 'rightTypeDesc'),
-            rightNumber=_get_str(data, 'rightNumber'),
-            rightRegDate=_get_str(data, 'rightRegDate'),
-            rightType=_get_str(data, 'rightType'),
-            part=_get_str(data, 'part'),
+            rightTypeDesc=_to_str(data.get('rightTypeDesc')),
+            rightNumber=_to_str(data.get('rightNumber')),
+            rightRegDate=_to_str(data.get('rightRegDate')),
+            rightType=_to_str(data.get('rightType')),
+            part=_to_str(data.get('part')),
         )
 
 
@@ -85,11 +87,11 @@ class RosreestrInquiryDto:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RosreestrInquiryDto:
         return cls(
-            price=_get_str(data, 'price'),
-            balance=_get_str(data, 'balance'),
-            credit=_get_str(data, 'credit'),
-            speed=_get_str(data, 'speed'),
-            attempts=_get_str(data, 'attempts'),
+            price=_to_str(data.get('price')),
+            balance=_to_str(data.get('balance')),
+            credit=_to_str(data.get('credit')),
+            speed=_to_str(data.get('speed')),
+            attempts=_to_str(data.get('attempts')),
         )
 
 
@@ -113,7 +115,9 @@ class RosreestrAddressDto:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RosreestrAddressDto:
-        kwargs = {field: _get_str(data, field) for field in cls.__annotations__}
+        kwargs = {
+            field: _to_str(data.get(field)) for field in cls.__annotations__
+        }
         return cls(**kwargs)  # type: ignore[arg-type]
 
 
@@ -126,18 +130,24 @@ class RosreestrObjectDto:
     rights: list[RosreestrRightDto] | None = None
     encumbrances: list[RosreestrEncumbranceDto] | None = None
     permittedUse: list[RosreestrPermittedUseDto] | None = None
-    mainCharacters: list[RosreestrMainCharactersDto] | None = None
+    mainCharacters: RosreestrMainCharactersDto | None = None
     inquiry: RosreestrInquiryDto | None = None
     objectType: str | None = None
+    ObjectType: str | None = None
     purpose: str | None = None
     status: str | None = None
     area: str | None = None
     level: str | None = None
     undergroundFloors: str | None = None
+    undergroundFloor: str | None = None
     wallMaterial: str | None = None
+    oksWallMaterial: str | None = None
     commissioningYear: str | None = None
+    oksCommisioningYear: str | None = None
     yearBuild: str | None = None
+    oksYearBuild: str | None = None
     cadUnitDate: str | None = None
+    cadCostDate: str | None = None
     regDate: str | None = None
 
     @classmethod
@@ -152,10 +162,7 @@ class RosreestrObjectDto:
             data.get('permittedUse'),
             RosreestrPermittedUseDto,
         )
-        main_characters = cls._parse_list(
-            data.get('mainCharacters'),
-            RosreestrMainCharactersDto,
-        )
+        main_characters = cls._parse_main_character(data.get('mainCharacters'))
         inquiry_data = data.get('inquiry')
         return cls(
             address=(
@@ -163,9 +170,9 @@ class RosreestrObjectDto:
                 if isinstance(address, dict)
                 else None
             ),
-            infoUpdate=_get_str(data, 'infoUpdate'),
-            cadNumber=_get_str(data, 'cadNumber'),
-            cadCost=_get_str(data, 'cadCost'),
+            infoUpdate=_to_str(data.get('infoUpdate')),
+            cadNumber=_to_str(data.get('cadNumber')),
+            cadCost=_to_str(data.get('cadCost')),
             rights=rights,
             encumbrances=encumbrances,
             permittedUse=permitted_use,
@@ -175,17 +182,35 @@ class RosreestrObjectDto:
                 if isinstance(inquiry_data, dict)
                 else None
             ),
-            objectType=_get_str(data, 'objectType'),
-            purpose=_get_str(data, 'purpose'),
-            status=_get_str(data, 'status'),
-            area=_get_str(data, 'area'),
-            level=_get_str(data, 'level'),
-            undergroundFloors=_get_str(data, 'undergroundFloors'),
-            wallMaterial=_get_str(data, 'wallMaterial'),
-            commissioningYear=_get_str(data, 'commissioningYear'),
-            yearBuild=_get_str(data, 'yearBuild'),
-            cadUnitDate=_get_str(data, 'cadUnitDate'),
-            regDate=_get_str(data, 'regDate'),
+            objectType=_to_str(data.get('objectType')),
+            ObjectType=_to_str(
+                data.get('ObjectType') or data.get('objectType')
+            ),
+            purpose=_to_str(data.get('purpose')),
+            status=_to_str(data.get('status')),
+            area=_to_str(data.get('area')),
+            level=_to_str(data.get('level')),
+            undergroundFloors=_to_str(data.get('undergroundFloors')),
+            undergroundFloor=_to_str(
+                data.get('undergroundFloor') or data.get('undergroundFloors')
+            ),
+            wallMaterial=_to_str(data.get('wallMaterial')),
+            oksWallMaterial=_to_str(
+                data.get('oksWallMaterial') or data.get('wallMaterial')
+            ),
+            commissioningYear=_to_str(data.get('commissioningYear')),
+            oksCommisioningYear=_to_str(
+                data.get('oksCommisioningYear') or data.get('commissioningYear')
+            ),
+            yearBuild=_to_str(data.get('yearBuild')),
+            oksYearBuild=_to_str(
+                data.get('oksYearBuild') or data.get('yearBuild')
+            ),
+            cadUnitDate=_to_str(data.get('cadUnitDate')),
+            cadCostDate=_to_str(
+                data.get('cadCostDate') or data.get('cadUnitDate')
+            ),
+            regDate=_to_str(data.get('regDate')),
         )
 
     @staticmethod
@@ -199,6 +224,18 @@ class RosreestrObjectDto:
             dto_cls.from_dict(item) for item in items if isinstance(item, dict)
         ]
         return parsed or None
+
+    @staticmethod
+    def _parse_main_character(
+        data: Any,
+    ) -> RosreestrMainCharactersDto | None:
+        if isinstance(data, dict):
+            return RosreestrMainCharactersDto.from_dict(data)
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    return RosreestrMainCharactersDto.from_dict(item)
+        return None
 
 
 @dataclass(slots=True)

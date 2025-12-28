@@ -43,8 +43,3 @@ class CachedRosreestrClient(RosreestrClientPort):
                 ttl_seconds=self._ttl_seconds,
             )
         return response
-
-    def find_cadastrals(self, *, address: str) -> list[str]:
-        """Проксировать поисковый метод без кэша."""
-
-        return self._inner.find_cadastrals(address=address)

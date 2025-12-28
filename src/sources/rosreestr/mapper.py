@@ -22,18 +22,22 @@ def map_object_to_normalized(
     return RosreestrHouseNormalized(
         cad_number=obj.cadNumber,
         readable_address=_get_readable_address(obj),
-        object_type=obj.objectType,
+        object_type=obj.ObjectType or obj.objectType,
         purpose=obj.purpose,
         is_actual=_map_is_actual(obj.status),
         status=obj.status,
         area_total=_parse_float(obj.area),
         level=_parse_int(obj.level),
-        underground_floors=_parse_int(obj.undergroundFloors),
-        wall_material=obj.wallMaterial,
-        commissioning_year=_parse_int(obj.commissioningYear),
-        year_build=_parse_int(obj.yearBuild),
+        underground_floors=_parse_int(
+            obj.undergroundFloor or obj.undergroundFloors
+        ),
+        wall_material=obj.oksWallMaterial or obj.wallMaterial,
+        commissioning_year=_parse_int(
+            obj.oksCommisioningYear or obj.commissioningYear,
+        ),
+        year_build=_parse_int(obj.oksYearBuild or obj.yearBuild),
         cadastral_value=_parse_float(obj.cadCost),
-        cadastral_value_date=_parse_date(obj.cadUnitDate),
+        cadastral_value_date=_parse_date(obj.cadCostDate or obj.cadUnitDate),
         info_update_date=_parse_date(obj.infoUpdate),
         reg_date=_parse_date(obj.regDate),
         encumbrances_count=_count(obj.encumbrances),

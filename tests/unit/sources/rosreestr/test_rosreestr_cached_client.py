@@ -19,9 +19,6 @@ class _FakeClient(RosreestrClientPort):
         self.calls += 1
         return self.response
 
-    def find_cadastrals(self, *, address: str) -> list[str]:
-        raise NotImplementedError
-
 
 @pytest.mark.parametrize('ttl', [60])
 def test_cached_client_returns_cached_response(ttl: int):

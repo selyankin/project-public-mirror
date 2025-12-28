@@ -25,6 +25,8 @@ class ApiCloudRosreestrClient(RosreestrClientPort):
     ) -> None:
         """Сохранить параметры доступа."""
 
+        if not token:
+            raise RosreestrClientError('token is required')
         self._token = token
         self._timeout = timeout_seconds
         self._client = client or httpx.Client(timeout=self._timeout)
@@ -39,30 +41,8 @@ class ApiCloudRosreestrClient(RosreestrClientPort):
         response = self._request(params)
         return RosreestrApiResponse.from_dict(response)
 
-    def find_cadastrals(self, *, address: str) -> list[str]:
-        """Найти кадастровые номера по адресу."""
-
-        params = {
-            'type': 'cadastr',
-            'adress': address,
-        }
-        response = self._request(params)
-        if isinstance(response, list):
-            return [str(item) for item in response]
-
-        if isinstance(response, dict):
-            candidates = response.get('cadastrals') or response.get('result')
-            if isinstance(candidates, list):
-                return [str(item) for item in candidates]
-
-        return []
-
     def _request(self, params: dict[str, str]) -> dict | list | None:
-        headers = {}
-        if self._token:
-            headers['Token'] = self._token
-        else:
-            params['token'] = ''
+        headers = {'Token': self._token}
 
         try:
             response = self._client.get(

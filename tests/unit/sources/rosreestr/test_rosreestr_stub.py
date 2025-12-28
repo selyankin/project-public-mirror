@@ -18,10 +18,3 @@ def test_stub_get_object_not_found():
     response = client.get_object(cadastral_number='random')
     assert response.found is False
     assert response.object is None
-
-
-def test_stub_find_cadastrals_by_address():
-    client = StubRosreestrClient()
-    result = client.find_cadastrals(address='г. Москва')
-    assert result == list(ROSREESTR_FIXTURE.keys())
-    assert client.find_cadastrals(address='   ') == []

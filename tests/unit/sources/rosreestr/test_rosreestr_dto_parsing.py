@@ -10,6 +10,17 @@ def test_rosreestr_dto_from_dict_parses_nested_fields():
         'object': {
             'cadNumber': '77:01:000101:1',
             'cadCost': '10000000',
+            'ObjectType': 'Помещение',
+            'undergroundFloor': None,
+            'oksWallMaterial': 'Монолит',
+            'oksYearBuild': '2010',
+            'cadCostDate': '05.04.2022',
+            'mainCharacters': {
+                'description': 'Площадь',
+                'value': '43.9',
+                'unitDescription': 'кв м',
+            },
+            'infoUpdate': '05.04.2022',
             'address': {
                 'readableAddress': 'г. Москва, ул. Тверская, д. 1',
                 'region': 'Москва',
@@ -30,10 +41,13 @@ def test_rosreestr_dto_from_dict_parses_nested_fields():
     assert dto.status == 200
     assert dto.found is True
     assert dto.object is not None
+    assert dto.object.ObjectType == 'Помещение'
     assert dto.object.cadNumber == '77:01:000101:1'
     assert dto.object.address is not None
     assert dto.object.address.readableAddress == (
         'г. Москва, ул. Тверская, д. 1'
     )
-    assert dto.object.inquiry is not None
-    assert dto.object.inquiry.balance == '10'
+    assert dto.object.oksYearBuild == '2010'
+    assert dto.object.cadCostDate == '05.04.2022'
+    assert dto.object.mainCharacters is not None
+    assert dto.object.mainCharacters.value == '43.9'

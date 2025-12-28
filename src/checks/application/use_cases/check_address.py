@@ -541,7 +541,7 @@ class CheckAddressUseCase:
 
         resolver = get_rosreestr_resolver_use_case(self._settings)
         try:
-            house = await asyncio.to_thread(
+            rosreestr_house = await asyncio.to_thread(
                 resolver.execute,
                 cadastral_number=target_number,
             )
@@ -561,7 +561,7 @@ class CheckAddressUseCase:
                 None,
             )
 
-        if house is None:
+        if rosreestr_house is None:
             return (
                 {
                     'found': False,
@@ -575,11 +575,11 @@ class CheckAddressUseCase:
         return (
             {
                 'found': True,
-                'house': self._rosreestr_house_to_payload(house),
+                'house': self._rosreestr_house_to_payload(rosreestr_house),
                 'error': None,
                 'signals': [],
             },
-            house,
+            rosreestr_house,
         )
 
     def _apply_rosreestr_signals(
