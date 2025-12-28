@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime
+from dataclasses import asdict
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -33,16 +34,22 @@ from checks.domain.value_objects.url import UrlRaw
 from checks.infrastructure.listing_resolver_container import (
     get_listing_resolver_use_case,
 )
+from checks.infrastructure.rosreestr_resolver_container import (
+    get_rosreestr_resolver_use_case,
+)
 from risks.application.scoring import build_risk_card
 from risks.domain.entities.risk_card import RiskCard, RiskSignal
 from risks.domain.signals_catalog import get_signal_definition
 from shared.domain.entities import HouseKey
+from shared.kernel.settings import Settings
 from sources.domain.entities import ListingNormalized
 from sources.domain.exceptions import (
     ListingFetchError,
     ListingNotSupportedError,
     ListingParseError,
 )
+from sources.rosreestr.models import RosreestrHouseNormalized
+from sources.rosreestr.signals import build_rosreestr_signals
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +64,7 @@ class CheckAddressUseCase:
         '_fias_client',
         '_fias_mode',
         '_cache_version',
+        '_settings',
     )
 
     def __init__(
@@ -68,6 +76,7 @@ class CheckAddressUseCase:
         *,
         fias_mode: str,
         cache_version: str,
+        settings: Settings | None = None,
     ):
         """Create use-case instance with required ports."""
 
@@ -77,6 +86,7 @@ class CheckAddressUseCase:
         self._fias_client = fias_client
         self._fias_mode = fias_mode
         self._cache_version = cache_version
+        self._settings = settings
 
     async def execute(self, raw_query: str) -> dict[str, Any]:
         """Выполнить проверку по строке адреса (устаревший формат)."""
@@ -176,7 +186,10 @@ class CheckAddressUseCase:
             )
             return None, None, None, signals, {}
 
-        fias_payload, fias_debug_raw = await self._fetch_fias_data(text)
+        fias_payload, fias_debug_raw, rosreestr_house = (
+            await self._fetch_fias_data(text)
+        )
+        self._apply_rosreestr_signals(fias_payload, rosreestr_house, None)
 
         normalized_input = normalize_address_raw(text).value
         cache_key = self._build_cache_key(
@@ -220,8 +233,13 @@ class CheckAddressUseCase:
         extracted = extract_address_from_url(url_vo)
         if extracted and is_address_like(extracted):
             normalized_address_input = normalize_address_raw(extracted).value
-            fias_payload, fias_debug_raw = await self._fetch_fias_data(
-                extracted,
+            fias_payload, fias_debug_raw, rosreestr_house = (
+                await self._fetch_fias_data(extracted)
+            )
+            self._apply_rosreestr_signals(
+                fias_payload,
+                rosreestr_house,
+                None,
             )
             risk_result, signals = await self._run_address_risk_check(
                 extracted,
@@ -245,8 +263,13 @@ class CheckAddressUseCase:
             normalized_address_input = normalize_address_raw(
                 listing_address,
             ).value
-            fias_payload, fias_debug_raw = await self._fetch_fias_data(
-                listing_address,
+            fias_payload, fias_debug_raw, rosreestr_house = (
+                await self._fetch_fias_data(listing_address)
+            )
+            self._apply_rosreestr_signals(
+                fias_payload,
+                rosreestr_house,
+                listing_payload,
             )
             risk_result, signals = await self._run_address_risk_check(
                 listing_address,
@@ -411,8 +434,12 @@ class CheckAddressUseCase:
     async def _fetch_fias_data(
         self,
         query: str,
-    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-        """Получить нормализацию из ФИАС и подготовить payload."""
+    ) -> tuple[
+        dict[str, Any] | None,
+        dict[str, Any] | None,
+        RosreestrHouseNormalized | None,
+    ]:
+        """Получить нормализацию из ФИАС и Росреестра."""
 
         try:
             normalized = await self._fias_client.normalize_address(query)
@@ -423,10 +450,10 @@ class CheckAddressUseCase:
                 query[:80],
                 exc,
             )
-            return None, None
+            return None, None, None
 
         if normalized is None:
-            return None, None
+            return None, None, None
 
         public_payload = {
             'source_query': normalized.source_query,
@@ -437,7 +464,17 @@ class CheckAddressUseCase:
         house_payload = self._build_house_payload(normalized)
         if house_payload:
             public_payload['house'] = house_payload
-        return public_payload, normalized.raw
+
+        rosreestr_payload, rosreestr_house = (
+            await self._build_rosreestr_payload(
+                house_payload,
+                normalized.cadastral_number,
+            )
+        )
+        if rosreestr_payload:
+            public_payload['rosreestr'] = rosreestr_payload
+
+        return public_payload, normalized.raw, rosreestr_house
 
     @staticmethod
     def _build_house_payload(dto: NormalizedAddress) -> dict[str, Any] | None:
@@ -482,6 +519,113 @@ class CheckAddressUseCase:
             payload['updated_at'] = dto.updated_at.isoformat()
 
         return payload or None
+
+    async def _build_rosreestr_payload(
+        self,
+        house_payload: dict[str, Any] | None,
+        cadastral_number: str | None,
+    ) -> tuple[dict[str, Any] | None, RosreestrHouseNormalized | None]:
+        """Получить данные Росреестра и собрать payload."""
+
+        if not self._settings:
+            return None, None
+
+        target_number = (
+            house_payload.get('cadastral_number') if house_payload else None
+        )
+        if not target_number:
+            target_number = cadastral_number
+
+        if not target_number:
+            return None, None
+
+        resolver = get_rosreestr_resolver_use_case(self._settings)
+        try:
+            house = await asyncio.to_thread(
+                resolver.execute,
+                cadastral_number=target_number,
+            )
+        except Exception as exc:
+            logger.info(
+                'rosreestr_resolver_failed cadastral=%s error=%s',
+                target_number,
+                exc,
+            )
+            return (
+                {
+                    'found': False,
+                    'house': None,
+                    'error': exc.__class__.__name__,
+                    'signals': [],
+                },
+                None,
+            )
+
+        if house is None:
+            return (
+                {
+                    'found': False,
+                    'house': None,
+                    'error': None,
+                    'signals': [],
+                },
+                None,
+            )
+
+        return (
+            {
+                'found': True,
+                'house': self._rosreestr_house_to_payload(house),
+                'error': None,
+                'signals': [],
+            },
+            house,
+        )
+
+    def _apply_rosreestr_signals(
+        self,
+        fias_payload: dict[str, Any] | None,
+        rosreestr_house: RosreestrHouseNormalized | None,
+        listing_payload: dict[str, Any] | None,
+    ) -> None:
+        """Добавить сигналы Росреестра к payload."""
+
+        if not fias_payload:
+            return
+
+        block = fias_payload.get('rosreestr')
+        if not block:
+            return
+
+        listing_area = (
+            listing_payload.get('area_total') if listing_payload else None
+        )
+        listing_floors = (
+            listing_payload.get('floors_total') if listing_payload else None
+        )
+        if rosreestr_house is None:
+            block.setdefault('signals', [])
+            return
+
+        signals = build_rosreestr_signals(
+            rosreestr=rosreestr_house,
+            listing_area_total=listing_area,
+            listing_floors_total=listing_floors,
+        )
+        block['signals'] = [signal.to_dict() for signal in signals]
+
+    @staticmethod
+    def _rosreestr_house_to_payload(
+        house: RosreestrHouseNormalized,
+    ) -> dict[str, Any]:
+        """Преобразовать доменную модель Росреестра к dict."""
+
+        payload = asdict(house)
+        for key, value in payload.items():
+            if isinstance(value, date):
+                payload[key] = value.isoformat()
+
+        return payload
 
     @staticmethod
     def _sanitize_input_value(value: str) -> str:

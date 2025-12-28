@@ -50,6 +50,7 @@ def _build_use_case(request: Request) -> CheckAddressUseCase:
         fias_client=fias_client,
         fias_mode=settings.FIAS_MODE,
         cache_version=settings.CHECK_CACHE_VERSION,
+        settings=settings,
     )
 
 

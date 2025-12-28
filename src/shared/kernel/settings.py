@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     FIAS_RETRY_BACKOFF_SECONDS: float = 0.5
     FIAS_CONCURRENCY_LIMIT: int = 5
     FIAS_SUGGEST_ENDPOINT: str = '/api/spas/v2.0/SearchAddressItem'
+    ROSREESTR_MODE: Literal['stub', 'api_cloud'] = 'stub'
+    ROSREESTR_TOKEN: str | None = None
+    ROSREESTR_TIMEOUT_SECONDS: int = 120
+    ROSREESTR_CACHE_MODE: Literal['none', 'memory'] = 'memory'
+    ROSREESTR_CACHE_TTL_SECONDS: int = 86400
     CHECK_CACHE_TTL_SECONDS: int = 600
     CHECK_CACHE_VERSION: str = 'v1'
     STORAGE_MODE: StorageMode = 'db'
