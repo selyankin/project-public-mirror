@@ -170,7 +170,7 @@ class PlaywrightGisGkhClient(GisGkhClientPort):
             'Accept': 'application/json; charset=utf-8',
             'Content-Type': 'application/json;charset=UTF-8',
             'Origin': BASE_URL,
-            'Referer': BASE_URL,
+            'Referer': BASE_LANDING,
             'X-Requested-With': 'XMLHttpRequest',
             'State-Guid': '/houses',
             'Session-Guid': self._session_guid,

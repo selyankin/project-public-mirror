@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 from shared.kernel.gis_gkh_client_factory import build_gis_gkh_client
 from shared.kernel.settings import Settings
 from sources.gis_gkh.use_cases.resolve_house_by_cadastral import (
@@ -28,4 +30,21 @@ def reset_gis_gkh_resolver_container() -> None:
     """Сбросить singleton (для тестов)."""
 
     global _use_case
+    _use_case = None
+
+
+async def shutdown_gis_gkh_resolver_container() -> None:
+    """Корректно закрыть GIS ЖКХ клиент и сбросить singleton."""
+
+    global _use_case
+    if _use_case is None:
+        return
+
+    client = _use_case.client
+    close_method = getattr(client, 'close', None)
+    if callable(close_method):
+        result = close_method()
+        if inspect.isawaitable(result):
+            await result
+
     _use_case = None

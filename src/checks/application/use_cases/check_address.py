@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import asdict
 from datetime import UTC, date, datetime
@@ -849,7 +850,29 @@ class CheckAddressUseCase:
         if not extra_signals:
             return
 
-        result.signals.extend(extra_signals)
+        def _fingerprint(signal: RiskSignal) -> str:
+            """Построить отпечаток сигнала для дедупликации."""
+
+            details = (
+                json.dumps(
+                    signal.details,
+                    sort_keys=True,
+                    ensure_ascii=False,
+                )
+                if signal.details is not None
+                else ''
+            )
+            level = signal.level or ''
+            return f'{signal.code}|{level}|{details}'
+
+        existing = {_fingerprint(signal) for signal in result.signals}
+        for signal in extra_signals:
+            fingerprint = _fingerprint(signal)
+            if fingerprint in existing:
+                continue
+            existing.add(fingerprint)
+            result.signals.append(signal)
+
         result.risk_card = build_risk_card(tuple(result.signals))
 
     @staticmethod
