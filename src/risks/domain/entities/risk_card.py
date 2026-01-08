@@ -44,7 +44,8 @@ class RiskSignal:
         self.level = self._coerce_level(data.get('level'))
         self.details = self._coerce_details(data.get('details'))
 
-    def _coerce_refs(self, value: Any) -> tuple[str, ...]:
+    @staticmethod
+    def _coerce_refs(value: Any) -> tuple[str, ...]:
         refs: tuple[str, ...]
         if value is None:
             refs = ()
@@ -80,27 +81,34 @@ class RiskSignal:
         }
         if self.level is not None:
             payload['level'] = self.level
+
         if self.details is not None:
             payload['details'] = self.details
+
         return payload
 
     @staticmethod
     def _coerce_level(value: Any) -> str | None:
         if value is None:
             return None
+
         if not isinstance(value, str):
             raise RiskDomainError('level must be a string.')
+
         candidate = value.strip().lower()
         if candidate not in {'info', 'warning', 'good'}:
             raise RiskDomainError('level must be info, warning, or good.')
+
         return candidate
 
     @staticmethod
     def _coerce_details(value: Any) -> dict[str, Any] | None:
         if value is None:
             return None
+
         if not isinstance(value, dict):
             raise RiskDomainError('details must be a dict.')
+
         return dict(value)
 
 

@@ -31,6 +31,9 @@ from checks.domain.value_objects.address import (
 )
 from checks.domain.value_objects.query import CheckQuery
 from checks.domain.value_objects.url import UrlRaw
+from checks.infrastructure.gis_gkh_resolver_container import (
+    get_gis_gkh_resolver_use_case,
+)
 from checks.infrastructure.listing_resolver_container import (
     get_listing_resolver_use_case,
 )
@@ -48,6 +51,8 @@ from sources.domain.exceptions import (
     ListingNotSupportedError,
     ListingParseError,
 )
+from sources.gis_gkh.models import GisGkhHouseNormalized
+from sources.gis_gkh.signals import build_gis_gkh_signals
 from sources.rosreestr.models import RosreestrHouseNormalized
 from sources.rosreestr.signals import build_rosreestr_signals
 
@@ -194,16 +199,26 @@ class CheckAddressUseCase:
             fias_debug_raw,
             rosreestr_house,
             rosreestr_payload,
+            gis_gkh_house,
+            gis_gkh_payload,
         ) = await self._fetch_fias_data(text)
+
         self._apply_rosreestr_signals(
             rosreestr_payload,
             rosreestr_house,
             None,
         )
-        sources_payload = (
-            {'rosreestr': rosreestr_payload} if rosreestr_payload else None
+        extra_signals = self._apply_gis_gkh_signals(
+            gis_gkh_payload,
+            gis_gkh_house,
+            None,
+        )
+        sources_payload = self._build_sources_payload(
+            rosreestr_payload,
+            gis_gkh_payload,
         )
         extras: dict[str, Any] = {}
+
         if sources_payload:
             extras['sources'] = sources_payload
 
@@ -217,6 +232,10 @@ class CheckAddressUseCase:
             return cached[0], cached[1], None, (), extras
 
         risk_result, signals = await self._run_address_risk_check(text)
+        if extra_signals:
+            self._merge_signals(risk_result, extra_signals)
+            signals = tuple(risk_result.signals)
+
         snapshot, check_id = await self._store_check_result(
             normalized_input,
             risk_result,
@@ -226,6 +245,7 @@ class CheckAddressUseCase:
             sources_payload=sources_payload,
         )
         await self._check_cache_repo.set(cache_key, check_id)
+
         return snapshot, check_id, risk_result, signals, extras
 
     async def _process_url(self, url_text: str) -> tuple[
@@ -255,14 +275,23 @@ class CheckAddressUseCase:
                 fias_debug_raw,
                 rosreestr_house,
                 rosreestr_payload,
+                gis_gkh_house,
+                gis_gkh_payload,
             ) = await self._fetch_fias_data(extracted)
+
             self._apply_rosreestr_signals(
                 rosreestr_payload,
                 rosreestr_house,
                 None,
             )
-            sources_payload = (
-                {'rosreestr': rosreestr_payload} if rosreestr_payload else None
+            extra_signals = self._apply_gis_gkh_signals(
+                gis_gkh_payload,
+                gis_gkh_house,
+                None,
+            )
+            sources_payload = self._build_sources_payload(
+                rosreestr_payload,
+                gis_gkh_payload,
             )
             extras = {}
             if sources_payload:
@@ -270,6 +299,10 @@ class CheckAddressUseCase:
             risk_result, signals = await self._run_address_risk_check(
                 extracted,
             )
+            if extra_signals:
+                self._merge_signals(risk_result, extra_signals)
+                signals = tuple(risk_result.signals)
+
             snapshot, check_id = await self._store_check_result(
                 normalized_address_input,
                 risk_result,
@@ -279,6 +312,7 @@ class CheckAddressUseCase:
                 sources_payload=sources_payload,
             )
             await self._check_cache_repo.set(cache_key, check_id)
+
             return snapshot, check_id, risk_result, signals, extras
 
         listing_result, listing_error = await self._try_resolve_listing(
@@ -295,18 +329,32 @@ class CheckAddressUseCase:
                 fias_debug_raw,
                 rosreestr_house,
                 rosreestr_payload,
+                gis_gkh_house,
+                gis_gkh_payload,
             ) = await self._fetch_fias_data(listing_address)
+
             self._apply_rosreestr_signals(
                 rosreestr_payload,
                 rosreestr_house,
                 listing_payload,
             )
-            sources_payload = (
-                {'rosreestr': rosreestr_payload} if rosreestr_payload else None
+            extra_signals = self._apply_gis_gkh_signals(
+                gis_gkh_payload,
+                gis_gkh_house,
+                listing_payload,
+            )
+            sources_payload = self._build_sources_payload(
+                rosreestr_payload,
+                gis_gkh_payload,
             )
             risk_result, signals = await self._run_address_risk_check(
                 listing_address,
             )
+
+            if extra_signals:
+                self._merge_signals(risk_result, extra_signals)
+                signals = tuple(risk_result.signals)
+
             snapshot, check_id = await self._store_check_result(
                 normalized_address_input,
                 risk_result,
@@ -320,7 +368,9 @@ class CheckAddressUseCase:
             extras['listing'] = listing_payload
             if sources_payload:
                 extras['sources'] = sources_payload
+
             await self._check_cache_repo.set(cache_key, check_id)
+
             return snapshot, check_id, risk_result, signals, extras
 
         if listing_error:
@@ -360,9 +410,11 @@ class CheckAddressUseCase:
         entry = await self._check_cache_repo.get(cache_key)
         if not entry:
             return None
+
         snapshot = await self._check_results_repo.get(entry.check_id)
         if snapshot is None:
             return None
+
         return snapshot, entry.check_id
 
     async def _try_resolve_listing(
@@ -380,11 +432,13 @@ class CheckAddressUseCase:
         except ListingNotSupportedError as exc:
             logger.info('listing_not_supported url=%s error=%s', url_text, exc)
             return None, 'ListingNotSupportedError'
+
         except (ListingFetchError, ListingParseError) as exc:
             logger.info(
                 'listing_resolver_failed url=%s error=%s', url_text, exc
             )
             return None, exc.__class__.__name__
+
         except Exception as exc:  # pragma: no cover
             logger.warning(
                 'listing_resolver_unexpected_error url=%s error=%s',
@@ -480,6 +534,8 @@ class CheckAddressUseCase:
         dict[str, Any] | None,
         RosreestrHouseNormalized | None,
         dict[str, Any] | None,
+        GisGkhHouseNormalized | None,
+        dict[str, Any] | None,
     ]:
         """Получить нормализацию из ФИАС и Росреестра."""
 
@@ -492,10 +548,10 @@ class CheckAddressUseCase:
                 query[:80],
                 exc,
             )
-            return None, None, None, None
+            return None, None, None, None, None, None
 
         if normalized is None:
-            return None, None, None, None
+            return None, None, None, None, None, None
 
         public_payload = {
             'source_query': normalized.source_query,
@@ -507,12 +563,26 @@ class CheckAddressUseCase:
         if house_payload:
             public_payload['house'] = house_payload
 
+        target_number = (
+            house_payload.get('cadastral_number') if house_payload else None
+        )
+        if not target_number:
+            target_number = normalized.cadastral_number
+
         (
             rosreestr_payload,
             rosreestr_house,
         ) = await self._build_rosreestr_payload(
-            house_payload,
-            normalized.cadastral_number,
+            target_number,
+        )
+
+        (
+            gis_gkh_payload,
+            gis_gkh_house,
+        ) = await self._build_gis_gkh_payload(
+            target_number=target_number,
+            region_code=normalized.region_code,
+            house_payload=house_payload,
         )
 
         return (
@@ -520,6 +590,8 @@ class CheckAddressUseCase:
             normalized.raw,
             rosreestr_house,
             rosreestr_payload,
+            gis_gkh_house,
+            gis_gkh_payload,
         )
 
     @staticmethod
@@ -568,19 +640,12 @@ class CheckAddressUseCase:
 
     async def _build_rosreestr_payload(
         self,
-        house_payload: dict[str, Any] | None,
-        cadastral_number: str | None,
+        target_number: str | None,
     ) -> tuple[dict[str, Any] | None, RosreestrHouseNormalized | None]:
         """Получить данные Росреестра и собрать payload."""
 
         if not self._settings:
             return None, None
-
-        target_number = (
-            house_payload.get('cadastral_number') if house_payload else None
-        )
-        if not target_number:
-            target_number = cadastral_number
 
         if not target_number:
             return None, None
@@ -628,6 +693,68 @@ class CheckAddressUseCase:
             rosreestr_house,
         )
 
+    async def _build_gis_gkh_payload(
+        self,
+        *,
+        target_number: str | None,
+        region_code: str | None,
+        house_payload: dict[str, Any] | None,
+    ) -> tuple[dict[str, Any] | None, GisGkhHouseNormalized | None]:
+        """Получить данные GIS ЖКХ и собрать payload."""
+
+        if not self._settings:
+            return None, None
+
+        resolved_region = region_code
+        if not resolved_region and house_payload:
+            resolved_region = house_payload.get('region_code')
+
+        if not target_number or not resolved_region:
+            return None, None
+
+        resolver = get_gis_gkh_resolver_use_case(self._settings)
+        try:
+            gis_gkh_house = await resolver.execute(
+                cadastral_number=target_number,
+                region_code=resolved_region,
+            )
+        except Exception as exc:
+            logger.info(
+                'gis_gkh_resolver_failed cadastral=%s error=%s',
+                target_number,
+                exc,
+            )
+            return (
+                {
+                    'found': False,
+                    'house': None,
+                    'error': exc.__class__.__name__,
+                    'signals': [],
+                },
+                None,
+            )
+
+        if gis_gkh_house is None:
+            return (
+                {
+                    'found': False,
+                    'house': None,
+                    'error': None,
+                    'signals': [],
+                },
+                None,
+            )
+
+        return (
+            {
+                'found': True,
+                'house': self._gis_gkh_house_to_payload(gis_gkh_house),
+                'error': None,
+                'signals': [],
+            },
+            gis_gkh_house,
+        )
+
     def _apply_rosreestr_signals(
         self,
         rosreestr_payload: dict[str, Any] | None,
@@ -656,6 +783,26 @@ class CheckAddressUseCase:
         )
         rosreestr_payload['signals'] = [signal.to_dict() for signal in signals]
 
+    def _apply_gis_gkh_signals(
+        self,
+        gis_gkh_payload: dict[str, Any] | None,
+        gis_gkh_house: GisGkhHouseNormalized | None,
+        listing_payload: dict[str, Any] | None,
+    ) -> list[RiskSignal]:
+        """Добавить сигналы GIS ЖКХ к payload."""
+
+        del listing_payload
+        if not gis_gkh_payload:
+            return []
+
+        if gis_gkh_house is None:
+            gis_gkh_payload.setdefault('signals', [])
+            return []
+
+        signals = build_gis_gkh_signals(house=gis_gkh_house)
+        gis_gkh_payload['signals'] = [signal.to_dict() for signal in signals]
+        return signals
+
     @staticmethod
     def _rosreestr_house_to_payload(
         house: RosreestrHouseNormalized,
@@ -668,6 +815,42 @@ class CheckAddressUseCase:
                 payload[key] = value.isoformat()
 
         return payload
+
+    @staticmethod
+    def _gis_gkh_house_to_payload(
+        house: GisGkhHouseNormalized,
+    ) -> dict[str, Any]:
+        """Преобразовать доменную модель GIS ЖКХ к dict."""
+
+        return asdict(house)
+
+    @staticmethod
+    def _build_sources_payload(
+        rosreestr_payload: dict[str, Any] | None,
+        gis_gkh_payload: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Собрать payload источников."""
+
+        payload: dict[str, Any] = {}
+        if rosreestr_payload:
+            payload['rosreestr'] = rosreestr_payload
+        if gis_gkh_payload:
+            payload['gis_gkh'] = gis_gkh_payload
+
+        return payload or None
+
+    @staticmethod
+    def _merge_signals(
+        result: AddressRiskCheckResult,
+        extra_signals: list[RiskSignal],
+    ) -> None:
+        """Добавить дополнительные сигналы в результат проверки."""
+
+        if not extra_signals:
+            return
+
+        result.signals.extend(extra_signals)
+        result.risk_card = build_risk_card(tuple(result.signals))
 
     @staticmethod
     def _sanitize_input_value(value: str) -> str:

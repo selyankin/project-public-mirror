@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     ROSREESTR_TIMEOUT_SECONDS: int = 120
     ROSREESTR_CACHE_MODE: Literal['none', 'memory'] = 'memory'
     ROSREESTR_CACHE_TTL_SECONDS: int = 86400
+    GIS_GKH_MODE: Literal['stub', 'playwright'] = 'stub'
+    GIS_GKH_TIMEOUT_SECONDS: int = 60
+    GIS_GKH_HEADLESS: bool = True
+    GIS_GKH_SSL_VERIFY: bool = True
     CHECK_CACHE_TTL_SECONDS: int = 600
     CHECK_CACHE_VERSION: str = 'v1'
     STORAGE_MODE: StorageMode = 'db'
