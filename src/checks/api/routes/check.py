@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -22,8 +23,12 @@ from checks.presentation.api.v1.serialization.input.checks import (
     LegacyCheckIn,
 )
 from checks.presentation.api.v1.serialization.output.checks import RiskCardOut
+from shared.kernel.kad_arbitr_client_factory import build_kad_arbitr_client
 from shared.kernel.repositories import check_cache_repo, check_results_repo
 from shared.kernel.settings import get_settings
+from sources.kad_arbitr.use_cases.resolve_cases_for_participant import (
+    ResolveKadArbitrCasesForParticipant,
+)
 
 router = APIRouter()
 
@@ -99,3 +104,47 @@ async def check_address(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     return _encode_response(result)
+
+
+@router.get('/internal/kad-arbitr/search')
+async def internal_kad_arbitr_search(
+    participant: str,
+    participant_type: int | None = None,
+    max_pages: int = 2,
+) -> dict[str, Any]:
+    """Выполнить ручной запрос kad.arbitr.ru."""
+
+    settings = get_settings()
+    client = build_kad_arbitr_client(settings=settings)
+    resolver = ResolveKadArbitrCasesForParticipant(client=client)
+    try:
+        result = await resolver.execute(
+            participant=participant,
+            participant_type=participant_type,
+            max_pages=max_pages,
+        )
+    finally:
+        close_method = getattr(client, 'close', None)
+        if callable(close_method):
+            result_close = close_method()
+            if inspect.isawaitable(result_close):
+                await result_close
+
+    return {
+        'participant': participant,
+        'total': result.total,
+        'cases': [
+            {
+                'case_id': case.case_id,
+                'case_number': case.case_number,
+                'court': case.court,
+                'case_type': case.case_type,
+                'start_date': (
+                    case.start_date.isoformat() if case.start_date else None
+                ),
+                'url': case.url,
+            }
+            for case in result.cases
+        ],
+        'signals': [signal.to_dict() for signal in result.signals],
+    }

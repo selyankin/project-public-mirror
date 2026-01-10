@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     GIS_GKH_TIMEOUT_SECONDS: int = 60
     GIS_GKH_HEADLESS: bool = True
     GIS_GKH_SSL_VERIFY: bool = True
+    KAD_ARBITR_MODE: str = 'stub'
+    KAD_ARBITR_BASE_URL: str = 'https://kad.arbitr.ru'
+    KAD_ARBITR_TIMEOUT_SECONDS: int = 30
+    KAD_ARBITR_SSL_VERIFY: bool = True
+    KAD_ARBITR_USER_AGENT: str | None = None
     CHECK_CACHE_TTL_SECONDS: int = 600
     CHECK_CACHE_VERSION: str = 'v1'
     STORAGE_MODE: StorageMode = 'db'

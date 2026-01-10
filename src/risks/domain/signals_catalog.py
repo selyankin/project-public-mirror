@@ -188,6 +188,42 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': 'medium',
         },
     ),
+    'kad_arbitr_has_bankruptcy_cases': SignalDefinition(
+        {
+            'code': 'kad_arbitr_has_bankruptcy_cases',
+            'title': 'Найдены дела о банкротстве',
+            'description': (
+                'В истории участника присутствуют дела о банкротстве'
+            ),
+            'severity': SignalSeverity.high,
+        },
+    ),
+    'kad_arbitr_many_cases_last_12m': SignalDefinition(
+        {
+            'code': 'kad_arbitr_many_cases_last_12m',
+            'title': 'Много дел за последние 12 месяцев',
+            'description': ('Количество дел за последний год превышает порог'),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'kad_arbitr_mostly_defendant': SignalDefinition(
+        {
+            'code': 'kad_arbitr_mostly_defendant',
+            'title': 'Участник чаще ответчик',
+            'description': (
+                'Большая часть дел содержит участника как ответчика'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'kad_arbitr_no_cases_found': SignalDefinition(
+        {
+            'code': 'kad_arbitr_no_cases_found',
+            'title': 'Дела в kad.arbitr.ru не найдены',
+            'description': ('По участнику не найдено судебных дел в базе'),
+            'severity': SignalSeverity.info,
+        },
+    ),
 }
 
 ORDERED_CODES: tuple[str, ...] = (
@@ -201,6 +237,10 @@ ORDERED_CODES: tuple[str, ...] = (
     'url_not_supported_yet',
     'query_type_not_supported',
     'query_not_address_like',
+    'kad_arbitr_has_bankruptcy_cases',
+    'kad_arbitr_many_cases_last_12m',
+    'kad_arbitr_mostly_defendant',
+    'kad_arbitr_no_cases_found',
 )
 
 
