@@ -6,7 +6,10 @@ from checks.application.use_cases.check_kad_arbitr_for_house import (
     CheckKadArbitrForHouse,
 )
 from sources.gis_gkh.models import GisGkhHouseNormalized
-from sources.kad_arbitr.exceptions import KadArbitrBlockedError
+from sources.kad_arbitr.exceptions import (
+    KadArbitrBlockedError,
+    KadArbitrClientError,
+)
 from sources.kad_arbitr.models import (
     KadArbitrCaseRaw,
     KadArbitrSearchPayload,
@@ -81,6 +84,8 @@ async def test_check_returns_not_found_if_no_participant() -> None:
     assert result.status == 'participant_not_found'
     assert result.cases == []
     assert client.calls == []
+    assert result.signals[0].code == 'kad_arbitr_participant_not_found'
+    assert result.total == 0
 
 
 async def test_check_returns_blocked_on_error() -> None:
@@ -95,3 +100,23 @@ async def test_check_returns_blocked_on_error() -> None:
 
     assert result.status == 'blocked'
     assert result.cases == []
+    assert result.signals[0].code == 'kad_arbitr_source_blocked'
+    assert result.total == 0
+
+
+async def test_check_returns_error_status_signal() -> None:
+    house = GisGkhHouseNormalized(
+        cadastral_number='77:01:000101:1',
+        management_company='ООО Ромашка ИНН 7701234567',
+    )
+    client = _KadArbitrClientStub(
+        error=KadArbitrClientError('error'),
+    )
+    use_case = CheckKadArbitrForHouse(kad_arbitr_client=client)
+
+    result = await use_case.execute(gis_gkh_result=house)
+
+    assert result.status == 'error'
+    assert result.cases == []
+    assert result.signals[0].code == 'kad_arbitr_source_error'
+    assert result.total == 0

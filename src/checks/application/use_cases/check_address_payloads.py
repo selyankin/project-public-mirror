@@ -85,6 +85,7 @@ def build_sources_payload(
     *,
     rosreestr_payload: dict[str, Any] | None,
     gis_gkh_payload: dict[str, Any] | None,
+    kad_arbitr_payload: dict[str, Any] | None,
 ) -> dict[str, Any] | None:
     """Собрать payload источников."""
 
@@ -93,5 +94,7 @@ def build_sources_payload(
         payload['rosreestr'] = rosreestr_payload
     if gis_gkh_payload:
         payload['gis_gkh'] = gis_gkh_payload
+    if kad_arbitr_payload:
+        payload['kad_arbitr'] = kad_arbitr_payload
 
     return payload or None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from typing import Any
 
@@ -12,12 +13,17 @@ from checks.application.use_cases.check_address_payloads import (
     gis_gkh_house_to_payload,
     rosreestr_house_to_payload,
 )
+from checks.application.use_cases.check_kad_arbitr_for_house import (
+    CheckKadArbitrForHouse,
+)
 from checks.infrastructure.gis_gkh_resolver_container import (
     get_gis_gkh_resolver_use_case,
 )
 from checks.infrastructure.rosreestr_resolver_container import (
     get_rosreestr_resolver_use_case,
 )
+from risks.domain.entities.risk_card import RiskSignal
+from shared.kernel.kad_arbitr_client_factory import build_kad_arbitr_client
 from shared.kernel.settings import Settings
 from sources.gis_gkh.models import GisGkhHouseNormalized
 from sources.rosreestr.models import RosreestrHouseNormalized
@@ -38,6 +44,8 @@ async def fetch_fias_data(
     dict[str, Any] | None,
     GisGkhHouseNormalized | None,
     dict[str, Any] | None,
+    dict[str, Any] | None,
+    list[RiskSignal],
 ]:
     """Получить нормализацию из ФИАС и источников."""
 
@@ -50,10 +58,10 @@ async def fetch_fias_data(
             query[:80],
             exc,
         )
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None, []
 
     if normalized is None:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None, []
 
     public_payload = {
         'source_query': normalized.source_query,
@@ -91,6 +99,13 @@ async def fetch_fias_data(
         region_code=normalized.region_code,
         house_payload=house_payload,
     )
+    (
+        kad_arbitr_payload,
+        kad_arbitr_signals,
+    ) = await build_kad_arbitr_payload(
+        settings=settings,
+        gis_gkh_house=gis_gkh_house,
+    )
 
     return (
         public_payload,
@@ -99,6 +114,8 @@ async def fetch_fias_data(
         rosreestr_payload,
         gis_gkh_house,
         gis_gkh_payload,
+        kad_arbitr_payload,
+        kad_arbitr_signals,
     )
 
 
@@ -220,3 +237,54 @@ async def build_gis_gkh_payload(
         },
         gis_gkh_house,
     )
+
+
+async def build_kad_arbitr_payload(
+    *,
+    settings: Settings | None,
+    gis_gkh_house: GisGkhHouseNormalized | None,
+) -> tuple[dict[str, Any] | None, list[RiskSignal]]:
+    """Получить данные kad.arbitr.ru и собрать payload."""
+
+    if not settings or gis_gkh_house is None:
+        return None, []
+
+    client = build_kad_arbitr_client(settings=settings)
+    use_case = CheckKadArbitrForHouse(
+        kad_arbitr_client=client,
+        base_url=settings.KAD_ARBITR_BASE_URL,
+    )
+    max_pages = getattr(settings, 'KAD_ARBITR_MAX_PAGES', 3)
+    try:
+        result = await use_case.execute(
+            gis_gkh_result=gis_gkh_house,
+            max_pages=max_pages,
+        )
+    finally:
+        close_method = getattr(client, 'close', None)
+        if callable(close_method):
+            result_close = close_method()
+            if inspect.isawaitable(result_close):
+                await result_close
+
+    payload = {
+        'status': result.status,
+        'participant': result.participant_used,
+        'total': result.total,
+        'cases': [
+            {
+                'case_id': case.case_id,
+                'case_number': case.case_number,
+                'court': case.court,
+                'case_type': case.case_type,
+                'start_date': (
+                    case.start_date.isoformat() if case.start_date else None
+                ),
+                'url': case.url,
+            }
+            for case in result.cases
+        ],
+        'signals': [signal.to_dict() for signal in result.signals],
+    }
+
+    return payload, result.signals

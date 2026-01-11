@@ -224,6 +224,42 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': SignalSeverity.info,
         },
     ),
+    'kad_arbitr_source_blocked': SignalDefinition(
+        {
+            'code': 'kad_arbitr_source_blocked',
+            'title': (
+                'Источник kad.arbitr.ru временно недоступен '
+                '(блокировка/антибот)'
+            ),
+            'description': (
+                'Источник kad.arbitr.ru временно недоступен '
+                'из-за блокировки или антибота'
+            ),
+            'severity': SignalSeverity.info,
+        },
+    ),
+    'kad_arbitr_source_error': SignalDefinition(
+        {
+            'code': 'kad_arbitr_source_error',
+            'title': 'Ошибка при запросе к kad.arbitr.ru',
+            'description': (
+                'Не удалось получить данные от kad.arbitr.ru из-за ошибки'
+            ),
+            'severity': SignalSeverity.info,
+        },
+    ),
+    'kad_arbitr_participant_not_found': SignalDefinition(
+        {
+            'code': 'kad_arbitr_participant_not_found',
+            'title': (
+                'Не удалось определить участника для поиска ' 'в kad.arbitr.ru'
+            ),
+            'description': (
+                'Отсутствуют данные участника для выполнения поиска'
+            ),
+            'severity': SignalSeverity.info,
+        },
+    ),
 }
 
 ORDERED_CODES: tuple[str, ...] = (
@@ -241,6 +277,9 @@ ORDERED_CODES: tuple[str, ...] = (
     'kad_arbitr_many_cases_last_12m',
     'kad_arbitr_mostly_defendant',
     'kad_arbitr_no_cases_found',
+    'kad_arbitr_source_blocked',
+    'kad_arbitr_source_error',
+    'kad_arbitr_participant_not_found',
 )
 
 

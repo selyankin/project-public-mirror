@@ -100,6 +100,8 @@ async def process_address(
         rosreestr_payload,
         gis_gkh_house,
         gis_gkh_payload,
+        kad_arbitr_payload,
+        kad_arbitr_signals,
     ) = await fetch_fias_data(text)
 
     apply_rosreestr_signals(
@@ -112,9 +114,11 @@ async def process_address(
         house=gis_gkh_house,
         listing_payload=None,
     )
+    extra_signals = tuple(extra_signals) + tuple(kad_arbitr_signals)
     sources_payload = build_sources_payload(
         rosreestr_payload=rosreestr_payload,
         gis_gkh_payload=gis_gkh_payload,
+        kad_arbitr_payload=kad_arbitr_payload,
     )
     extras: dict[str, Any] = {}
     if sources_payload:
@@ -208,6 +212,8 @@ async def process_url(
             rosreestr_payload,
             gis_gkh_house,
             gis_gkh_payload,
+            kad_arbitr_payload,
+            kad_arbitr_signals,
         ) = await fetch_fias_data(extracted)
 
         apply_rosreestr_signals(
@@ -220,9 +226,11 @@ async def process_url(
             house=gis_gkh_house,
             listing_payload=None,
         )
+        extra_signals = tuple(extra_signals) + tuple(kad_arbitr_signals)
         sources_payload = build_sources_payload(
             rosreestr_payload=rosreestr_payload,
             gis_gkh_payload=gis_gkh_payload,
+            kad_arbitr_payload=kad_arbitr_payload,
         )
         extras: dict[str, Any] = {}
         if sources_payload:
@@ -266,6 +274,8 @@ async def process_url(
             rosreestr_payload,
             gis_gkh_house,
             gis_gkh_payload,
+            kad_arbitr_payload,
+            kad_arbitr_signals,
         ) = await fetch_fias_data(listing_address)
 
         apply_rosreestr_signals(
@@ -278,9 +288,11 @@ async def process_url(
             house=gis_gkh_house,
             listing_payload=listing_payload,
         )
+        extra_signals = tuple(extra_signals) + tuple(kad_arbitr_signals)
         sources_payload = build_sources_payload(
             rosreestr_payload=rosreestr_payload,
             gis_gkh_payload=gis_gkh_payload,
+            kad_arbitr_payload=kad_arbitr_payload,
         )
         risk_result, _ = await run_address_risk_check(listing_address)
         merged_signals = merge_signals(

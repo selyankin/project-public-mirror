@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from risks.domain.entities.risk_card import RiskSignal
+from risks.domain.signals_catalog import get_signal_definition
 from sources.gis_gkh.models import GisGkhHouseNormalized
 from sources.kad_arbitr.exceptions import (
     KadArbitrBlockedError,
@@ -24,6 +25,7 @@ class KadArbitrHouseCheckResult:
     participant_used: str | None
     cases: list[KadArbitrCaseNormalized]
     signals: list[RiskSignal]
+    total: int
     status: str
 
 
@@ -46,7 +48,13 @@ class CheckKadArbitrForHouse:
             return KadArbitrHouseCheckResult(
                 participant_used=None,
                 cases=[],
-                signals=[],
+                signals=[
+                    _build_status_signal(
+                        'kad_arbitr_participant_not_found',
+                        'participant_not_found',
+                    )
+                ],
+                total=0,
                 status='participant_not_found',
             )
 
@@ -60,7 +68,13 @@ class CheckKadArbitrForHouse:
             return KadArbitrHouseCheckResult(
                 participant_used=None,
                 cases=[],
-                signals=[],
+                signals=[
+                    _build_status_signal(
+                        'kad_arbitr_participant_not_found',
+                        'participant_not_found',
+                    )
+                ],
+                total=0,
                 status='participant_not_found',
             )
 
@@ -77,14 +91,26 @@ class CheckKadArbitrForHouse:
             return KadArbitrHouseCheckResult(
                 participant_used=participant,
                 cases=[],
-                signals=[],
+                signals=[
+                    _build_status_signal(
+                        'kad_arbitr_source_blocked',
+                        'blocked',
+                    )
+                ],
+                total=0,
                 status='blocked',
             )
         except KadArbitrClientError:
             return KadArbitrHouseCheckResult(
                 participant_used=participant,
                 cases=[],
-                signals=[],
+                signals=[
+                    _build_status_signal(
+                        'kad_arbitr_source_error',
+                        'error',
+                    )
+                ],
+                total=0,
                 status='error',
             )
 
@@ -92,6 +118,7 @@ class CheckKadArbitrForHouse:
             participant_used=participant,
             cases=result.cases,
             signals=result.signals,
+            total=result.total,
             status='ok',
         )
 
@@ -126,3 +153,22 @@ def _normalize_participant_name(value: str | None) -> str | None:
 
     trimmed = value.strip()
     return trimmed or None
+
+
+def _build_status_signal(code: str, status: str) -> RiskSignal:
+    """Собрать сигнал состояния источника."""
+
+    definition = get_signal_definition(code)
+    return RiskSignal(
+        {
+            'code': definition.code,
+            'title': definition.title,
+            'description': definition.description,
+            'severity': int(definition.severity),
+            'evidence_refs': [],
+            'details': {
+                'status': status,
+                'source': 'kad_arbitr',
+            },
+        }
+    )

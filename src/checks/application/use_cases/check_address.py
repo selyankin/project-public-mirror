@@ -273,6 +273,8 @@ class CheckAddressUseCase:
         dict[str, Any] | None,
         GisGkhHouseNormalized | None,
         dict[str, Any] | None,
+        dict[str, Any] | None,
+        list[RiskSignal],
     ]:
         """Получить нормализацию из ФИАС и Росреестра."""
 
