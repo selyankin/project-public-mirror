@@ -42,3 +42,25 @@ async def test_stub_returns_provided_response() -> None:
     )
 
     assert result is response
+
+
+async def test_stub_returns_case_card_html() -> None:
+    html = '<html><body>card</body></html>'
+    client = StubKadArbitrClient(
+        case_cards_by_id={'case-1': html},
+    )
+
+    result = await client.get_case_card_html(case_id='case-1')
+
+    assert result == html
+
+
+async def test_stub_returns_case_acts_html() -> None:
+    html = '<html><body>acts</body></html>'
+    client = StubKadArbitrClient(
+        case_acts_cards_by_id={'case-1': html},
+    )
+
+    result = await client.get_case_acts_html(case_id='case-1')
+
+    assert result == html

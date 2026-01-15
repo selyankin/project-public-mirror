@@ -224,6 +224,48 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': SignalSeverity.info,
         },
     ),
+    'kad_arbitr_losses_last_24m': SignalDefinition(
+        {
+            'code': 'kad_arbitr_losses_last_24m',
+            'title': 'Неблагоприятные исходы за 24 месяца',
+            'description': (
+                'Обнаружены дела за 24 месяца с неблагоприятным исходом '
+                'для участника'
+            ),
+            'severity': SignalSeverity.high,
+        },
+    ),
+    'kad_arbitr_bankruptcy_procedure': SignalDefinition(
+        {
+            'code': 'kad_arbitr_bankruptcy_procedure',
+            'title': 'Процедуры банкротства',
+            'description': (
+                'Обнаружены судебные акты о процедурах банкротства'
+            ),
+            'severity': SignalSeverity.high,
+        },
+    ),
+    'kad_arbitr_many_loses_as_defendant': SignalDefinition(
+        {
+            'code': 'kad_arbitr_many_loses_as_defendant',
+            'title': 'Много проигрышей как ответчик',
+            'description': (
+                'За 24 месяца выявлено несколько неблагоприятных исходов '
+                'для участника в роли ответчика'
+            ),
+            'severity': SignalSeverity.high,
+        },
+    ),
+    'kad_arbitr_outcome_unknown_many': SignalDefinition(
+        {
+            'code': 'kad_arbitr_outcome_unknown_many',
+            'title': 'Недостаточно данных по исходам дел',
+            'description': (
+                'Существенная доля исходов дел не определена по документам'
+            ),
+            'severity': SignalSeverity.info,
+        },
+    ),
     'kad_arbitr_source_blocked': SignalDefinition(
         {
             'code': 'kad_arbitr_source_blocked',
@@ -277,6 +319,10 @@ ORDERED_CODES: tuple[str, ...] = (
     'kad_arbitr_many_cases_last_12m',
     'kad_arbitr_mostly_defendant',
     'kad_arbitr_no_cases_found',
+    'kad_arbitr_losses_last_24m',
+    'kad_arbitr_bankruptcy_procedure',
+    'kad_arbitr_many_loses_as_defendant',
+    'kad_arbitr_outcome_unknown_many',
     'kad_arbitr_source_blocked',
     'kad_arbitr_source_error',
     'kad_arbitr_participant_not_found',

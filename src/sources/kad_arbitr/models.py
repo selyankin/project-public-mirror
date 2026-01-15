@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from typing import Literal
 
 
 @dataclass(slots=True)
@@ -91,6 +92,109 @@ class KadArbitrCaseNormalized:
 
 
 @dataclass(slots=True)
+class KadArbitrParticipantNormalized:
+    """Нормализованный участник дела."""
+
+    name: str
+    role: str
+    inn: str | None = None
+    ogrn: str | None = None
+    is_target_participant: bool = False
+
+
+@dataclass(slots=True)
+class KadArbitrCaseDetailsNormalized:
+    """Нормализованные детали карточки дела."""
+
+    case_id: str
+    case_number: str | None = None
+    court: str | None = None
+    participants: list[KadArbitrParticipantNormalized] = field(
+        default_factory=list,
+    )
+    card_url: str | None = None
+
+
+@dataclass(slots=True)
+class KadArbitrJudicialActNormalized:
+    """Нормализованный судебный акт."""
+
+    act_id: str
+    act_type: str
+    act_type_raw: str | None = None
+    act_date: date | None = None
+    pdf_url: str | None = None
+    raw_url: str | None = None
+    title: str | None = None
+
+
+@dataclass(slots=True)
+class KadArbitrCaseActsNormalized:
+    """Нормализованные судебные акты по делу."""
+
+    case_id: str
+    card_url: str | None = None
+    acts: list[KadArbitrJudicialActNormalized] = field(default_factory=list)
+
+
+KadArbitrOutcomeType = Literal[
+    'satisfied',
+    'denied',
+    'partial',
+    'terminated',
+    'left_without_review',
+    'settlement_approved',
+    'bankruptcy_observation',
+    'bankruptcy_competition',
+    'bankruptcy_bankrupt_declared',
+    'unknown',
+]
+
+KadArbitrOutcomeConfidence = Literal['high', 'medium', 'low']
+
+
+@dataclass(slots=True)
+class KadArbitrActOutcomeNormalized:
+    """Нормализованный исход судебного акта."""
+
+    act_id: str
+    outcome: KadArbitrOutcomeType
+    confidence: KadArbitrOutcomeConfidence
+    matched_phrase: str | None = None
+    evidence_snippet: str | None = None
+    reason: str | None = None
+    source: str = 'kad_arbitr_pdf'
+
+
+@dataclass(slots=True)
+class KadArbitrCaseOutcomeNormalized:
+    """Нормализованный исход по делу."""
+
+    case_id: str
+    act_id: str | None = None
+    outcome: KadArbitrOutcomeType = 'unknown'
+    confidence: KadArbitrOutcomeConfidence = 'low'
+    matched_phrase: str | None = None
+    evidence_snippet: str | None = None
+    reason: str | None = None
+
+
+@dataclass(slots=True)
+class KadArbitrEnrichedCase:
+    """Обогащённый кейс kad.arbitr.ru."""
+
+    case_id: str
+    case_number: str | None = None
+    start_date: date | None = None
+    target_role: str | None = None
+    outcome: KadArbitrOutcomeType = 'unknown'
+    confidence: KadArbitrOutcomeConfidence = 'low'
+    act_id: str | None = None
+    evidence_snippet: str | None = None
+    card_url: str | None = None
+
+
+@dataclass(slots=True)
 class KadArbitrSearchResponse:
     """Ответ поиска по делам."""
 
@@ -159,3 +263,138 @@ def parse_iso_date(value: str | None) -> date | None:
         return datetime.fromisoformat(trimmed).date()
     except ValueError:
         return None
+
+
+def parse_ru_date(value: str | None) -> date | None:
+    """Безопасно распарсить дату из русской строки."""
+
+    if value is None:
+        return None
+
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+
+    try:
+        return datetime.strptime(trimmed, '%d.%m.%Y').date()
+    except ValueError:
+        pass
+
+    try:
+        return date.fromisoformat(trimmed)
+    except ValueError:
+        return None
+
+
+def map_act_type(raw: str | None) -> str:
+    """Сопоставить тип судебного акта."""
+
+    if raw is None:
+        return 'other'
+
+    lowered = raw.lower()
+    if 'решен' in lowered:
+        return 'decision'
+    if 'определен' in lowered:
+        return 'determination'
+    if 'постановлен' in lowered:
+        return 'resolution'
+    return 'other'
+
+
+def normalize_inn(value: str | None) -> str | None:
+    """Нормализовать ИНН."""
+
+    if value is None:
+        return None
+
+    digits = ''.join(char for char in value if char.isdigit())
+    if len(digits) in (10, 12):
+        return digits
+
+    return None
+
+
+def normalize_ogrn(value: str | None) -> str | None:
+    """Нормализовать ОГРН."""
+
+    if value is None:
+        return None
+
+    digits = ''.join(char for char in value if char.isdigit())
+    if len(digits) in (13, 15):
+        return digits
+
+    return None
+
+
+def normalize_participant_name(value: str) -> str:
+    """Нормализовать имя участника."""
+
+    cleaned = value.lower().replace('ё', 'е')
+    for char in ('«', '»', '"', "'", ',', '.', '(', ')'):
+        cleaned = cleaned.replace(char, ' ')
+    cleaned = ' '.join(cleaned.split())
+    for prefix in ('ооо', 'оао', 'зао', 'пао', 'ао'):
+        if cleaned.startswith(prefix + ' '):
+            cleaned = cleaned[len(prefix) + 1 :]
+            break
+    return cleaned.strip()
+
+
+def is_probably_same_participant(*, target: str, candidate: str) -> bool:
+    """Проверить, что участники совпадают по имени."""
+
+    target_norm = normalize_participant_name(target)
+    candidate_norm = normalize_participant_name(candidate)
+    if not target_norm or not candidate_norm:
+        return False
+    if target_norm == candidate_norm:
+        return True
+    if len(target_norm) >= 6 and target_norm in candidate_norm:
+        return True
+    if len(candidate_norm) >= 6 and candidate_norm in target_norm:
+        return True
+    return False
+
+
+def is_inn(value: str) -> bool:
+    """Проверить, что строка является ИНН."""
+
+    digits = ''.join(char for char in value if char.isdigit())
+    return len(digits) in (10, 12)
+
+
+def is_ogrn(value: str) -> bool:
+    """Проверить, что строка является ОГРН."""
+
+    digits = ''.join(char for char in value if char.isdigit())
+    return len(digits) in (13, 15)
+
+
+def is_bankruptcy_outcome(outcome: str) -> bool:
+    """Проверить, что исход относится к банкротству."""
+
+    return outcome in {
+        'bankruptcy_observation',
+        'bankruptcy_competition',
+        'bankruptcy_bankrupt_declared',
+    }
+
+
+def is_negative_outcome_for_defendant(outcome: str) -> bool:
+    """Проверить, что исход негативен для ответчика."""
+
+    return outcome in {
+        'satisfied',
+        'partial',
+        'bankruptcy_observation',
+        'bankruptcy_competition',
+        'bankruptcy_bankrupt_declared',
+    }
+
+
+def is_negative_outcome_for_plaintiff(outcome: str) -> bool:
+    """Проверить, что исход негативен для истца."""
+
+    return outcome in {'denied'}

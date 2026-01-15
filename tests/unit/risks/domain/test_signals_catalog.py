@@ -32,6 +32,17 @@ def test_all_signal_definitions_order():
         'url_not_supported_yet',
         'query_type_not_supported',
         'query_not_address_like',
+        'kad_arbitr_has_bankruptcy_cases',
+        'kad_arbitr_many_cases_last_12m',
+        'kad_arbitr_mostly_defendant',
+        'kad_arbitr_no_cases_found',
+        'kad_arbitr_losses_last_24m',
+        'kad_arbitr_bankruptcy_procedure',
+        'kad_arbitr_many_loses_as_defendant',
+        'kad_arbitr_outcome_unknown_many',
+        'kad_arbitr_source_blocked',
+        'kad_arbitr_source_error',
+        'kad_arbitr_participant_not_found',
     ]
 
 

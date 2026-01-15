@@ -72,12 +72,12 @@ def _build_use_case(monkeypatch, listing, rosreestr_result):
     listing_stub = _ListingResolverStub(listing)
     rosreestr_stub = _RosreestrResolverStub(rosreestr_result)
     monkeypatch.setattr(
-        'checks.application.use_cases.check_address.'
+        'checks.infrastructure.listing_resolver_container.'
         'get_listing_resolver_use_case',
         lambda: listing_stub,
     )
     monkeypatch.setattr(
-        'checks.application.use_cases.check_address.'
+        'checks.infrastructure.rosreestr_resolver_container.'
         'get_rosreestr_resolver_use_case',
         lambda settings: rosreestr_stub,
     )

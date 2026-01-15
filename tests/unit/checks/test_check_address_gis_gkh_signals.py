@@ -55,12 +55,12 @@ class _GisGkhResolverStub:
 
 def _make_use_case(monkeypatch, gis_gkh_house: GisGkhHouseNormalized):
     monkeypatch.setattr(
-        'checks.application.use_cases.check_address.'
+        'checks.infrastructure.rosreestr_resolver_container.'
         'get_rosreestr_resolver_use_case',
         lambda settings: _RosreestrResolverStub(),
     )
     monkeypatch.setattr(
-        'checks.application.use_cases.check_address.'
+        'checks.infrastructure.gis_gkh_resolver_container.'
         'get_gis_gkh_resolver_use_case',
         lambda settings: _GisGkhResolverStub(gis_gkh_house),
     )
