@@ -23,6 +23,10 @@ _ROLE_MARKERS = (
     'заявитель',
     'должник',
     'кредитор',
+    'взыскатель',
+    'заинтересованное лицо',
+    'финансовый управляющий',
+    'арбитражный управляющий',
 )
 
 
@@ -141,11 +145,19 @@ def _map_role(text: str) -> str:
     if 'ответчик' in text:
         return 'defendant'
     if 'заявитель' in text:
-        return 'plaintiff'
+        return 'applicant'
     if 'должник' in text:
-        return 'defendant'
+        return 'debtor'
     if 'кредитор' in text:
+        return 'creditor'
+    if 'взыскатель' in text:
         return 'plaintiff'
+    if 'финансовый управляющий' in text:
+        return 'other'
+    if 'арбитражный управляющий' in text:
+        return 'other'
+    if 'заинтересованное лицо' in text:
+        return 'other'
     if 'треть' in text:
         return 'third_party'
     return 'other'

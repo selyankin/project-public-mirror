@@ -47,3 +47,17 @@ def test_parse_case_card_html_handles_missing_fields() -> None:
     assert result.case_number is None
     assert result.court is None
     assert result.participants == []
+
+
+def test_parse_case_card_html_debtor_creditor_roles() -> None:
+    html = (
+        '<html><body>'
+        '<div>Должник: ООО Ромашка ИНН 7701234567</div>'
+        '<div>Кредитор: ПАО Банк ИНН 7709876543</div>'
+        '</body></html>'
+    )
+
+    result = parse_case_card_html(case_id='123', html=html)
+
+    assert result.participants[0].role == 'debtor'
+    assert result.participants[1].role == 'creditor'

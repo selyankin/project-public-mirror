@@ -5,17 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from risks.domain.entities.risk_card import RiskSignal
-from risks.domain.signals_catalog import get_signal_definition
+from sources.kad_arbitr.amounts_extractor import extract_amounts
+from sources.kad_arbitr.claim_classifier import classify_claim
 from sources.kad_arbitr.exceptions import (
     KadArbitrBlockedError,
     KadArbitrClientError,
 )
 from sources.kad_arbitr.models import (
     KadArbitrEnrichedCase,
+    KadArbitrFacts,
     KadArbitrParticipantNormalized,
+    evaluate_outcome_impact,
+    map_role_to_group,
 )
-from sources.kad_arbitr.signals import build_kad_arbitr_outcome_signals
 from sources.kad_arbitr.use_cases.enrich_case_participants import (
     EnrichKadArbitrCaseParticipants,
 )
@@ -31,10 +33,7 @@ from sources.kad_arbitr.use_cases.resolve_cases_for_participant import (
 class EnrichKadArbitrCasesResult:
     """Результат обогащения дел по участнику."""
 
-    cases: list[KadArbitrEnrichedCase]
-    signals: list[RiskSignal]
-    stats: dict[str, int | float]
-    status: str
+    facts: KadArbitrFacts
 
 
 @dataclass(slots=True)
@@ -78,48 +77,78 @@ class EnrichKadArbitrCasesForParticipant:
                 outcome = await self.case_outcome_uc.execute(
                     case_id=case.case_id,
                 )
+                outcome_text = outcome.extracted_text or ''
+                claim_result = classify_claim(text=outcome_text)
+                amounts_result = extract_amounts(
+                    text=outcome_text, max_amounts=3
+                )
+                role_group = map_role_to_group(target_role)
+                impact, impact_confidence = evaluate_outcome_impact(
+                    outcome=outcome.outcome,
+                    role_group=role_group,
+                )
                 enriched_cases.append(
                     KadArbitrEnrichedCase(
                         case_id=case.case_id,
                         case_number=case.case_number,
                         start_date=case.start_date,
+                        case_type=case.case_type,
+                        court=case.court,
+                        url=case.url,
                         target_role=target_role,
+                        target_role_group=role_group,
                         outcome=outcome.outcome,
                         confidence=outcome.confidence,
+                        impact=impact,
+                        impact_confidence=impact_confidence,
                         act_id=outcome.act_id,
                         evidence_snippet=outcome.evidence_snippet,
                         card_url=details.card_url,
+                        claim_categories=claim_result.categories,
+                        claim_confidence=claim_result.confidence,
+                        claim_matched_keywords=claim_result.matched_keywords,
+                        amounts=amounts_result.amounts,
+                        amounts_fragments=amounts_result.matched_fragments,
                     )
                 )
 
         except KadArbitrBlockedError:
             return EnrichKadArbitrCasesResult(
-                cases=[],
-                signals=[_build_status_signal('kad_arbitr_source_blocked')],
-                stats={},
-                status='blocked',
+                facts=KadArbitrFacts(
+                    status='blocked',
+                    participant=participant,
+                    participant_type=participant_type,
+                    cases=[],
+                    stats={},
+                    reason='blocked',
+                ),
             )
 
         except KadArbitrClientError:
             return EnrichKadArbitrCasesResult(
-                cases=[],
-                signals=[_build_status_signal('kad_arbitr_source_error')],
-                stats={},
-                status='error',
+                facts=KadArbitrFacts(
+                    status='error',
+                    participant=participant,
+                    participant_type=participant_type,
+                    cases=[],
+                    stats={},
+                    reason='error',
+                ),
             )
 
-        outcome_signals = build_kad_arbitr_outcome_signals(
-            cases=enriched_cases,
-        )
         stats = {
             'total': len(enriched_cases),
             'max_cases': max_cases,
         }
         return EnrichKadArbitrCasesResult(
-            cases=enriched_cases,
-            signals=outcome_signals,
-            stats=stats,
-            status='ok',
+            facts=KadArbitrFacts(
+                status='ok',
+                participant=participant,
+                participant_type=participant_type,
+                cases=enriched_cases,
+                stats=stats,
+                reason=None,
+            ),
         )
 
 
@@ -147,29 +176,3 @@ def _select_target_role(
             selected_score = score
 
     return selected_role
-
-
-def _build_status_signal(code: str) -> RiskSignal:
-    """Собрать системный сигнал статуса."""
-
-    definition = get_signal_definition(code)
-    if code == 'kad_arbitr_source_blocked':
-        status = 'blocked'
-    elif code == 'kad_arbitr_source_error':
-        status = 'error'
-    else:
-        status = 'unknown'
-
-    return RiskSignal(
-        {
-            'code': definition.code,
-            'title': definition.title,
-            'description': definition.description,
-            'severity': int(definition.severity),
-            'evidence_refs': [],
-            'details': {
-                'status': status,
-                'source': 'kad_arbitr',
-            },
-        }
-    )

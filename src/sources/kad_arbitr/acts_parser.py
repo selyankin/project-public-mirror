@@ -60,7 +60,7 @@ def _extract_acts(
 
     acts: list[KadArbitrJudicialActNormalized] = []
     for match in _iter_pdf_urls(html=html, base_url=base_url):
-        context = _extract_context(html, match.start(), match.end())
+        context = _extract_link_context(html, match.start, match.end)
         act_type_raw = _extract_act_type(context)
         act_date = _extract_date(context)
         act_id = _extract_act_id_from_url(match.url)
@@ -142,8 +142,12 @@ def _iter_pdf_urls(
     """Найти ссылки на PDF."""
 
     matches: list[_PdfMatch] = []
+    seen: set[str] = set()
     for match in _PDF_URL_RE.finditer(html):
         url = match.group(1)
+        if url in seen:
+            continue
+        seen.add(url)
         matches.append(
             _PdfMatch(
                 url=url,
@@ -157,6 +161,9 @@ def _iter_pdf_urls(
     for match in _PDF_URL_REL_RE.finditer(html):
         url = match.group(1)
         pdf_url = f'{base_url.rstrip("/")}{url}'
+        if pdf_url in seen:
+            continue
+        seen.add(pdf_url)
         matches.append(
             _PdfMatch(
                 url=url,
@@ -213,6 +220,16 @@ def _extract_context(html: str, start: int, end: int) -> str:
     left = max(0, start - 200)
     right = min(len(html), end + 200)
     return _strip_html(html[left:right])
+
+
+def _extract_link_context(html: str, start: int, end: int) -> str:
+    """Достать текст ссылки, если возможно."""
+
+    left = html.find('>', start)
+    right = html.find('<', end)
+    if left != -1 and right != -1 and left < right:
+        return _strip_html(html[left + 1 : right])
+    return _extract_context(html, start, end)
 
 
 def _strip_html(source: str) -> str:

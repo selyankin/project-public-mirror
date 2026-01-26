@@ -147,10 +147,36 @@ KadArbitrOutcomeType = Literal[
     'bankruptcy_observation',
     'bankruptcy_competition',
     'bankruptcy_bankrupt_declared',
+    'appeal_left_unchanged',
+    'appeal_changed',
+    'appeal_canceled',
+    'complaint_left_unsatisfied',
+    'complaint_returned',
+    'complaint_left_without_movement',
     'unknown',
 ]
 
 KadArbitrOutcomeConfidence = Literal['high', 'medium', 'low']
+KadArbitrRoleGroup = Literal[
+    'defendant_like',
+    'plaintiff_like',
+    'neutral',
+    'unknown',
+]
+KadArbitrImpact = Literal['negative', 'neutral', 'positive', 'unknown']
+KadArbitrClaimCategory = Literal[
+    'bankruptcy',
+    'construction_quality',
+    'ddu_penalty',
+    'contractor_dispute',
+    'utilities_and_management',
+    'rent_and_lease',
+    'debt_collection',
+    'land_and_property',
+    'corporate_dispute',
+    'other',
+    'unknown',
+]
 
 
 @dataclass(slots=True)
@@ -160,8 +186,12 @@ class KadArbitrActOutcomeNormalized:
     act_id: str
     outcome: KadArbitrOutcomeType
     confidence: KadArbitrOutcomeConfidence
+    extracted_text: str | None = None
     matched_phrase: str | None = None
     evidence_snippet: str | None = None
+    matched_rule_id: str | None = None
+    matched_pattern: str | None = None
+    notes: str | None = None
     reason: str | None = None
     source: str = 'kad_arbitr_pdf'
 
@@ -174,6 +204,7 @@ class KadArbitrCaseOutcomeNormalized:
     act_id: str | None = None
     outcome: KadArbitrOutcomeType = 'unknown'
     confidence: KadArbitrOutcomeConfidence = 'low'
+    extracted_text: str | None = None
     matched_phrase: str | None = None
     evidence_snippet: str | None = None
     reason: str | None = None
@@ -186,12 +217,44 @@ class KadArbitrEnrichedCase:
     case_id: str
     case_number: str | None = None
     start_date: date | None = None
+    case_type: str | None = None
+    court: str | None = None
+    url: str | None = None
     target_role: str | None = None
+    target_role_group: KadArbitrRoleGroup | None = None
     outcome: KadArbitrOutcomeType = 'unknown'
     confidence: KadArbitrOutcomeConfidence = 'low'
+    impact: KadArbitrImpact = 'unknown'
+    impact_confidence: KadArbitrOutcomeConfidence = 'low'
     act_id: str | None = None
     evidence_snippet: str | None = None
     card_url: str | None = None
+    claim_categories: list[KadArbitrClaimCategory] = field(
+        default_factory=list,
+    )
+    claim_confidence: KadArbitrOutcomeConfidence = 'low'
+    claim_matched_keywords: list[str] = field(default_factory=list)
+    amounts: list[int] = field(default_factory=list)
+    amounts_fragments: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class KadArbitrAmountsResult:
+    """Результат извлечения сумм из текста."""
+
+    amounts: list[int]
+    matched_fragments: list[str] = field(default_factory=list)
+    notes: str | None = None
+
+
+@dataclass(slots=True)
+class KadArbitrClaimCategoryResult:
+    """Результат классификации предмета спора."""
+
+    categories: list[KadArbitrClaimCategory]
+    confidence: KadArbitrOutcomeConfidence
+    matched_keywords: list[str] = field(default_factory=list)
+    notes: str | None = None
 
 
 @dataclass(slots=True)
@@ -242,6 +305,19 @@ def _to_int(value: object | None) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _truncate_text(value: str | None, *, limit: int) -> str | None:
+    """Обрезать текст до безопасной длины."""
+
+    if value is None:
+        return None
+
+    trimmed = value.strip()
+    if len(trimmed) <= limit:
+        return trimmed
+
+    return trimmed[:limit]
 
 
 def parse_iso_date(value: str | None) -> date | None:
@@ -372,6 +448,59 @@ def is_ogrn(value: str) -> bool:
     return len(digits) in (13, 15)
 
 
+@dataclass(slots=True)
+class KadArbitrFacts:
+    """Факты по данным kad.arbitr.ru."""
+
+    status: str
+    participant: str
+    participant_type: int | None = None
+    cases: list[KadArbitrEnrichedCase] = field(default_factory=list)
+    stats: dict[str, int | float] = field(default_factory=dict)
+    reason: str | None = None
+
+    def to_sources_payload(self) -> dict[str, object]:
+        """Сериализовать факты для payload."""
+
+        total = self.stats.get('total', len(self.cases))
+        return {
+            'status': self.status,
+            'participant': self.participant,
+            'participant_type': self.participant_type,
+            'total': total,
+            'cases': [
+                {
+                    'case_id': case.case_id,
+                    'case_number': case.case_number,
+                    'start_date': (
+                        case.start_date.isoformat() if case.start_date else None
+                    ),
+                    'case_type': case.case_type,
+                    'court': case.court,
+                    'url': case.url,
+                    'target_role': case.target_role,
+                    'target_role_group': case.target_role_group,
+                    'outcome': case.outcome,
+                    'confidence': case.confidence,
+                    'impact': case.impact,
+                    'impact_confidence': case.impact_confidence,
+                    'act_id': case.act_id,
+                    'evidence_snippet': _truncate_text(
+                        case.evidence_snippet,
+                        limit=300,
+                    ),
+                    'card_url': case.card_url,
+                    'claim_categories': list(case.claim_categories),
+                    'claim_confidence': case.claim_confidence,
+                    'amounts': list(case.amounts),
+                }
+                for case in self.cases
+            ],
+            'stats': dict(self.stats),
+            'reason': self.reason,
+        }
+
+
 def is_bankruptcy_outcome(outcome: str) -> bool:
     """Проверить, что исход относится к банкротству."""
 
@@ -398,3 +527,73 @@ def is_negative_outcome_for_plaintiff(outcome: str) -> bool:
     """Проверить, что исход негативен для истца."""
 
     return outcome in {'denied'}
+
+
+def map_role_to_group(role: str | None) -> KadArbitrRoleGroup:
+    """Сопоставить роль с группой."""
+
+    if role is None:
+        return 'unknown'
+
+    if role in {'defendant', 'debtor'}:
+        return 'defendant_like'
+    if role in {'plaintiff', 'creditor', 'applicant'}:
+        return 'plaintiff_like'
+    if role in {'third_party', 'other'}:
+        return 'neutral'
+    return 'unknown'
+
+
+def evaluate_outcome_impact(
+    *,
+    outcome: str,
+    role_group: KadArbitrRoleGroup,
+) -> tuple[KadArbitrImpact, KadArbitrOutcomeConfidence]:
+    """Оценить влияние исхода для участника (MVP)."""
+
+    if outcome == 'unknown' or role_group == 'unknown':
+        return 'unknown', 'low'
+
+    if role_group == 'defendant_like':
+        if outcome in {'satisfied', 'partial'}:
+            return 'negative', 'high'
+        if outcome in {
+            'bankruptcy_observation',
+            'bankruptcy_competition',
+            'bankruptcy_bankrupt_declared',
+        }:
+            return 'negative', 'high'
+        if outcome == 'denied':
+            return 'positive', 'high'
+        if outcome in {
+            'terminated',
+            'left_without_review',
+            'complaint_returned',
+            'complaint_left_without_movement',
+        }:
+            return 'neutral', 'medium'
+        return 'neutral', 'low'
+
+    if role_group == 'plaintiff_like':
+        if outcome in {'satisfied', 'partial'}:
+            return 'positive', 'high'
+        if outcome == 'denied':
+            return 'negative', 'high'
+        if outcome in {
+            'terminated',
+            'left_without_review',
+            'complaint_returned',
+            'complaint_left_without_movement',
+        }:
+            return 'neutral', 'medium'
+        if outcome == 'complaint_left_unsatisfied':
+            return 'negative', 'medium'
+        if outcome in {
+            'bankruptcy_observation',
+            'bankruptcy_competition',
+            'bankruptcy_bankrupt_declared',
+        }:
+            return 'neutral', 'low'
+        return 'neutral', 'low'
+
+    return 'neutral', 'low'

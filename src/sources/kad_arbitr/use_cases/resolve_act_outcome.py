@@ -42,6 +42,7 @@ class ResolveKadArbitrActOutcome:
                 outcome='unknown',
                 confidence='low',
                 reason='pdf_url is missing',
+                extracted_text=None,
             )
 
         cache_key = ('pdf_text', act.pdf_url)
@@ -64,8 +65,10 @@ class ResolveKadArbitrActOutcome:
                 outcome='unknown',
                 confidence='low',
                 reason='empty extracted text',
+                extracted_text=None,
             )
 
         outcome = extract_outcome_from_text(text=text)
         outcome.act_id = act.act_id
+        outcome.extracted_text = text
         return outcome

@@ -266,6 +266,67 @@ DEFINITIONS: dict[str, SignalDefinition] = {
             'severity': SignalSeverity.info,
         },
     ),
+    'kad_arbitr_claims_construction_quality': SignalDefinition(
+        {
+            'code': 'kad_arbitr_claims_construction_quality',
+            'title': 'Дела по качеству строительства',
+            'description': (
+                'Обнаружены судебные дела, связанные с '
+                'качеством или дефектами строительства'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'kad_arbitr_claims_ddu_penalty': SignalDefinition(
+        {
+            'code': 'kad_arbitr_claims_ddu_penalty',
+            'title': 'Дела по ДДУ и неустойкам',
+            'description': ('Обнаружены дела по ДДУ и неустойкам (214-ФЗ)'),
+            'severity': SignalSeverity.high,
+        },
+    ),
+    'kad_arbitr_claims_utilities_management': SignalDefinition(
+        {
+            'code': 'kad_arbitr_claims_utilities_management',
+            'title': 'Дела по ЖКХ и управлению',
+            'description': (
+                'Обнаружены дела, связанные с ЖКХ, управляющими '
+                'компаниями и коммунальными платежами'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'kad_arbitr_claims_land_property': SignalDefinition(
+        {
+            'code': 'kad_arbitr_claims_land_property',
+            'title': 'Дела по земле и недвижимости',
+            'description': (
+                'Обнаружены дела, связанные с землёй и недвижимостью'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'kad_arbitr_claims_corporate': SignalDefinition(
+        {
+            'code': 'kad_arbitr_claims_corporate',
+            'title': 'Корпоративные споры',
+            'description': (
+                'Обнаружены корпоративные споры и разногласия между '
+                'участниками организаций'
+            ),
+            'severity': SignalSeverity.medium,
+        },
+    ),
+    'kad_arbitr_large_claim_amounts': SignalDefinition(
+        {
+            'code': 'kad_arbitr_large_claim_amounts',
+            'title': 'Крупные суммы требований',
+            'description': (
+                'Обнаружены дела с крупными суммами требований ' 'или взысканий'
+            ),
+            'severity': SignalSeverity.high,
+        },
+    ),
     'kad_arbitr_source_blocked': SignalDefinition(
         {
             'code': 'kad_arbitr_source_blocked',
@@ -323,6 +384,12 @@ ORDERED_CODES: tuple[str, ...] = (
     'kad_arbitr_bankruptcy_procedure',
     'kad_arbitr_many_loses_as_defendant',
     'kad_arbitr_outcome_unknown_many',
+    'kad_arbitr_claims_construction_quality',
+    'kad_arbitr_claims_ddu_penalty',
+    'kad_arbitr_claims_utilities_management',
+    'kad_arbitr_claims_land_property',
+    'kad_arbitr_claims_corporate',
+    'kad_arbitr_large_claim_amounts',
     'kad_arbitr_source_blocked',
     'kad_arbitr_source_error',
     'kad_arbitr_participant_not_found',

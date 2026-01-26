@@ -55,5 +55,10 @@ async def test_build_kad_arbitr_payload_returns_payload(monkeypatch) -> None:
     assert payload['participant'] == '7701234567'
     assert payload['total'] == 1
     assert payload['cases'][0]['case_id'] == '1'
+    assert 'claim_categories' in payload['cases'][0]
+    assert 'amounts' in payload['cases'][0]
+    assert 'impact' in payload['cases'][0]
+    assert 'amounts_fragments' not in payload['cases'][0]
+    assert 'claim_matched_keywords' not in payload['cases'][0]
     codes = {signal.code for signal in signals}
     assert 'kad_arbitr_has_bankruptcy_cases' in codes

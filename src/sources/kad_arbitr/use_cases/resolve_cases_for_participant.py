@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from risks.domain.entities.risk_card import RiskSignal
 from sources.kad_arbitr.mapper import normalize_cases
 from sources.kad_arbitr.models import (
     KadArbitrCaseNormalized,
@@ -12,7 +11,6 @@ from sources.kad_arbitr.models import (
     KadArbitrSideFilter,
 )
 from sources.kad_arbitr.ports import KadArbitrClientPort
-from sources.kad_arbitr.signals import build_kad_arbitr_signals
 
 
 @dataclass(slots=True)
@@ -20,7 +18,6 @@ class ResolveKadArbitrCasesResult:
     """Результат разрешения дел по участнику."""
 
     cases: list[KadArbitrCaseNormalized]
-    signals: list[RiskSignal]
     total: int
 
 
@@ -65,9 +62,7 @@ class ResolveKadArbitrCasesForParticipant:
                 break
 
         cases = normalize_cases(raw_cases=raw_items, base_url=self.base_url)
-        signals = build_kad_arbitr_signals(cases=cases)
         return ResolveKadArbitrCasesResult(
             cases=cases,
-            signals=signals,
             total=total,
         )

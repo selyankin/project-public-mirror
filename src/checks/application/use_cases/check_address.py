@@ -191,9 +191,22 @@ class CheckAddressUseCase:
     ]:
         """Обработать запрос URL и учесть кэш."""
 
+        from checks.infrastructure import listing_resolver_container
+
+        listing_resolver_factory = get_listing_resolver_use_case
+        if (
+            getattr(listing_resolver_factory, '__module__', '')
+            == 'checks.infrastructure.listing_resolver_container'
+        ):
+            listing_resolver_factory = (
+                listing_resolver_container.get_listing_resolver_use_case
+            )
+
+        listing_resolver_uc = listing_resolver_factory()
+
         return await process_url(
             url_text=url_text,
-            listing_resolver_uc=get_listing_resolver_use_case(),
+            listing_resolver_uc=listing_resolver_uc,
             fetch_fias_data=self._fetch_fias_data,
             run_address_risk_check=self._run_address_risk_check,
             store_check_result=self._store_check_result,

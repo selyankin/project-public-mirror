@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from sources.kad_arbitr.acts_selector import select_final_act
 from sources.kad_arbitr.models import (
     KadArbitrCaseOutcomeNormalized,
-    KadArbitrJudicialActNormalized,
 )
 from sources.kad_arbitr.use_cases.resolve_act_outcome import (
     ResolveKadArbitrActOutcome,
@@ -38,7 +38,13 @@ class ResolveKadArbitrCaseOutcome:
                 reason='no acts found',
             )
 
-        selected = _select_act(acts_result.acts)
+        selected = select_final_act(acts=acts_result.acts)
+        if selected is None:
+            return KadArbitrCaseOutcomeNormalized(
+                case_id=case_id,
+                reason='no acts found',
+            )
+
         act_outcome = await self._act_outcome_uc.execute(act=selected)
 
         return KadArbitrCaseOutcomeNormalized(
@@ -46,19 +52,8 @@ class ResolveKadArbitrCaseOutcome:
             act_id=selected.act_id,
             outcome=act_outcome.outcome,
             confidence=act_outcome.confidence,
+            extracted_text=getattr(act_outcome, 'extracted_text', None),
             matched_phrase=act_outcome.matched_phrase,
             evidence_snippet=act_outcome.evidence_snippet,
             reason=act_outcome.reason,
         )
-
-
-def _select_act(
-    acts: list[KadArbitrJudicialActNormalized],
-) -> KadArbitrJudicialActNormalized:
-    """Выбрать акт для определения исхода."""
-
-    dated = [act for act in acts if act.act_date is not None]
-    if dated:
-        return max(dated, key=lambda item: item.act_date or item.act_id)
-
-    return acts[0]

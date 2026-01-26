@@ -22,13 +22,15 @@ class _ActsStub:
             {
                 'acts': [
                     KadArbitrJudicialActNormalized(
-                        act_id='old',
+                        act_id='decision',
                         act_type='decision',
+                        act_type_raw='Решение',
                         act_date=date(2024, 1, 1),
                     ),
                     KadArbitrJudicialActNormalized(
-                        act_id='new',
-                        act_type='decision',
+                        act_id='appeal',
+                        act_type='resolution',
+                        act_type_raw='Постановление апелляции',
                         act_date=date(2025, 1, 1),
                     ),
                 ]
@@ -58,7 +60,7 @@ class _OutcomeStub:
 pytestmark = pytest.mark.asyncio
 
 
-async def test_resolve_case_outcome_selects_latest_act() -> None:
+async def test_resolve_case_outcome_selects_final_act() -> None:
     acts_uc = _ActsStub()
     outcome_uc = _OutcomeStub()
     use_case = ResolveKadArbitrCaseOutcome(
@@ -68,5 +70,5 @@ async def test_resolve_case_outcome_selects_latest_act() -> None:
 
     result = await use_case.execute(case_id='case-1')
 
-    assert result.act_id == 'new'
-    assert outcome_uc.calls == ['new']
+    assert result.act_id == 'appeal'
+    assert outcome_uc.calls == ['appeal']

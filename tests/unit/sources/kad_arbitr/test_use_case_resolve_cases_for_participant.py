@@ -60,5 +60,3 @@ async def test_use_case_collects_pages_and_signals() -> None:
 
     assert client.calls == [1, 2]
     assert len(result.cases) == 2
-    codes = {signal.code for signal in result.signals}
-    assert 'kad_arbitr_has_bankruptcy_cases' in codes

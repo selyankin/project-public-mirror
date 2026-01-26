@@ -71,6 +71,10 @@ class _OutcomeStub:
                 outcome='satisfied',
                 confidence='high',
                 evidence_snippet='удовлетворить иск',
+                extracted_text=(
+                    'Договор долевого участия по 214-ФЗ. '
+                    'Взыскать 2 000 000 руб.'
+                ),
             )
         return KadArbitrCaseOutcomeNormalized(
             case_id=case_id,
@@ -92,9 +96,12 @@ async def test_enrich_cases_for_participant_collects_signals() -> None:
 
     result = await use_case.execute(participant='ООО Ромашка', max_cases=2)
 
-    assert len(result.cases) == 2
-    codes = {signal.code for signal in result.signals}
-    assert 'kad_arbitr_losses_last_24m' in codes
+    assert len(result.facts.cases) == 2
+    assert result.facts.status == 'ok'
+    enriched = result.facts.cases[0]
+    assert 'ddu_penalty' in enriched.claim_categories
+    assert 2000000 in enriched.amounts
+    assert enriched.impact == 'negative'
 
 
 async def test_enrich_cases_for_participant_respects_limit() -> None:
@@ -106,4 +113,4 @@ async def test_enrich_cases_for_participant_respects_limit() -> None:
 
     result = await use_case.execute(participant='ООО Ромашка', max_cases=1)
 
-    assert len(result.cases) == 1
+    assert len(result.facts.cases) == 1

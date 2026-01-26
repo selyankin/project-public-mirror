@@ -16,12 +16,6 @@ from checks.application.use_cases.check_address_payloads import (
 from checks.application.use_cases.check_kad_arbitr_for_house import (
     CheckKadArbitrForHouse,
 )
-from checks.infrastructure.gis_gkh_resolver_container import (
-    get_gis_gkh_resolver_use_case,
-)
-from checks.infrastructure.rosreestr_resolver_container import (
-    get_rosreestr_resolver_use_case,
-)
 from risks.domain.entities.risk_card import RiskSignal
 from shared.kernel.kad_arbitr_client_factory import build_kad_arbitr_client
 from shared.kernel.settings import Settings
@@ -89,6 +83,21 @@ async def fetch_fias_data(
         settings=settings,
         target_number=target_number,
     )
+    if rosreestr_payload is None:
+        if rosreestr_house is not None:
+            rosreestr_payload = {
+                'found': True,
+                'house': rosreestr_house_to_payload(rosreestr_house),
+                'error': None,
+                'signals': [],
+            }
+        elif target_number:
+            rosreestr_payload = {
+                'found': False,
+                'house': None,
+                'error': None,
+                'signals': [],
+            }
 
     (
         gis_gkh_payload,
@@ -132,7 +141,14 @@ async def build_rosreestr_payload(
     if not target_number:
         return None, None
 
-    resolver = get_rosreestr_resolver_use_case(settings)
+    from importlib import import_module
+
+    resolver_factory = (
+        import_module(
+            'checks.infrastructure.rosreestr_resolver_container',
+        )
+    ).get_rosreestr_resolver_use_case
+    resolver = resolver_factory(settings)
     try:
         rosreestr_house = await asyncio.to_thread(
             resolver.execute,
@@ -195,7 +211,14 @@ async def build_gis_gkh_payload(
     if not target_number or not resolved_region:
         return None, None
 
-    resolver = get_gis_gkh_resolver_use_case(settings)
+    from importlib import import_module
+
+    resolver_factory = (
+        import_module(
+            'checks.infrastructure.gis_gkh_resolver_container',
+        )
+    ).get_gis_gkh_resolver_use_case
+    resolver = resolver_factory(settings)
     try:
         gis_gkh_house = await resolver.execute(
             cadastral_number=target_number,
@@ -249,10 +272,18 @@ async def build_kad_arbitr_payload(
     if not settings or gis_gkh_house is None:
         return None, []
 
-    client = build_kad_arbitr_client(settings=settings)
+    try:
+        client = build_kad_arbitr_client(settings=settings)
+    except AttributeError:
+        return None, []
+    base_url = getattr(
+        settings,
+        'KAD_ARBITR_BASE_URL',
+        'https://kad.arbitr.ru',
+    )
     use_case = CheckKadArbitrForHouse(
         kad_arbitr_client=client,
-        base_url=settings.KAD_ARBITR_BASE_URL,
+        base_url=base_url,
     )
     max_pages = getattr(settings, 'KAD_ARBITR_MAX_PAGES', 3)
     try:
@@ -267,24 +298,17 @@ async def build_kad_arbitr_payload(
             if inspect.isawaitable(result_close):
                 await result_close
 
-    payload = {
-        'status': result.status,
-        'participant': result.participant_used,
-        'total': result.total,
-        'cases': [
-            {
-                'case_id': case.case_id,
-                'case_number': case.case_number,
-                'court': case.court,
-                'case_type': case.case_type,
-                'start_date': (
-                    case.start_date.isoformat() if case.start_date else None
-                ),
-                'url': case.url,
-            }
-            for case in result.cases
-        ],
-        'signals': [signal.to_dict() for signal in result.signals],
-    }
+    facts_payload = result.facts.to_sources_payload() if result.facts else None
+    if facts_payload is None:
+        payload = {
+            'status': result.status,
+            'participant': result.participant_used,
+            'total': 0,
+            'cases': [],
+            'signals': [signal.to_dict() for signal in result.signals],
+        }
+    else:
+        payload = facts_payload
+        payload['signals'] = [signal.to_dict() for signal in result.signals]
 
     return payload, result.signals
