@@ -60,3 +60,23 @@ async def test_resolve_act_outcome_missing_pdf() -> None:
 
     assert result.outcome == 'unknown'
     assert result.reason == 'pdf_url is missing'
+
+
+async def test_resolve_act_outcome_truncates_text() -> None:
+    act = KadArbitrJudicialActNormalized(
+        act_id='act-3',
+        act_type='decision',
+        pdf_url='https://kad.arbitr.ru/Document/Pdf/3',
+    )
+    long_text = 'Решил: В удовлетворении отказать. ' + ('a' * 100_000)
+    extractor = _StubExtractor(text=long_text)
+    use_case = ResolveKadArbitrActOutcome(
+        fetcher=_StubFetcher(),
+        text_extractor=extractor,
+    )
+
+    result = await use_case.execute(act=act)
+
+    assert result.outcome == 'denied'
+    assert result.extracted_text is not None
+    assert len(result.extracted_text) <= 30_000

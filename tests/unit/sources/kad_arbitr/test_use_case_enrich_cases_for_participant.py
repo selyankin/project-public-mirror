@@ -114,3 +114,38 @@ async def test_enrich_cases_for_participant_respects_limit() -> None:
     result = await use_case.execute(participant='ООО Ромашка', max_cases=1)
 
     assert len(result.facts.cases) == 1
+
+
+async def test_enrich_cases_selects_debtor_role() -> None:
+    class _ParticipantsMultiStub:
+        async def execute(self, *, case_id: str, target_participant: str):
+            participants = [
+                KadArbitrParticipantNormalized(
+                    name='ООО Кредитор',
+                    role='creditor',
+                    inn='7701111111',
+                    is_target_participant=True,
+                ),
+                KadArbitrParticipantNormalized(
+                    name='ООО Должник',
+                    role='debtor',
+                    inn='7702222222',
+                    is_target_participant=True,
+                ),
+            ]
+            return KadArbitrCaseDetailsNormalized(
+                case_id=case_id,
+                participants=participants,
+                card_url=f'https://kad.arbitr.ru/Card/{case_id}',
+            )
+
+    use_case = EnrichKadArbitrCasesForParticipant(
+        search_uc=_SearchStub(),
+        details_uc=_ParticipantsMultiStub(),
+        case_outcome_uc=_OutcomeStub(),
+    )
+
+    result = await use_case.execute(participant='ООО Должник', max_cases=1)
+
+    assert result.facts.cases[0].target_role == 'debtor'
+    assert result.facts.cases[0].target_role_group == 'defendant_like'

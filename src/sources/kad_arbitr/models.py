@@ -462,7 +462,10 @@ class KadArbitrFacts:
     def to_sources_payload(self) -> dict[str, object]:
         """Сериализовать факты для payload."""
 
-        total = self.stats.get('total', len(self.cases))
+        total = self.stats.get(
+            'cases_total_found',
+            self.stats.get('total', len(self.cases)),
+        )
         return {
             'status': self.status,
             'participant': self.participant,

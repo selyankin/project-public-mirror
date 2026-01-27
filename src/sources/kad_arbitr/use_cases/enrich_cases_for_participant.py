@@ -61,14 +61,40 @@ class EnrichKadArbitrCasesForParticipant:
                 participant_type=participant_type,
                 max_pages=max_pages,
             )
-            cases_sorted = sorted(
-                search_result.cases,
-                key=lambda item: item.start_date or date.min,
-                reverse=True,
+        except KadArbitrBlockedError:
+            return EnrichKadArbitrCasesResult(
+                facts=KadArbitrFacts(
+                    status='blocked',
+                    participant=participant,
+                    participant_type=participant_type,
+                    cases=[],
+                    stats={},
+                    reason='blocked',
+                ),
             )
-            limited = cases_sorted[:max_cases]
-            enriched_cases: list[KadArbitrEnrichedCase] = []
-            for case in limited:
+        except KadArbitrClientError:
+            return EnrichKadArbitrCasesResult(
+                facts=KadArbitrFacts(
+                    status='error',
+                    participant=participant,
+                    participant_type=participant_type,
+                    cases=[],
+                    stats={},
+                    reason='error',
+                ),
+            )
+
+        cases_sorted = sorted(
+            search_result.cases,
+            key=lambda item: item.start_date or date.min,
+            reverse=True,
+        )
+        limited = cases_sorted[:max_cases]
+        enriched_cases: list[KadArbitrEnrichedCase] = []
+        errors_count = 0
+        error_examples: list[dict[str, str]] = []
+        for case in limited:
+            try:
                 details = await self.details_uc.execute(
                     case_id=case.case_id,
                     target_participant=participant,
@@ -80,7 +106,8 @@ class EnrichKadArbitrCasesForParticipant:
                 outcome_text = outcome.extracted_text or ''
                 claim_result = classify_claim(text=outcome_text)
                 amounts_result = extract_amounts(
-                    text=outcome_text, max_amounts=3
+                    text=outcome_text,
+                    max_amounts=3,
                 )
                 role_group = map_role_to_group(target_role)
                 impact, impact_confidence = evaluate_outcome_impact(
@@ -111,35 +138,38 @@ class EnrichKadArbitrCasesForParticipant:
                         amounts_fragments=amounts_result.matched_fragments,
                     )
                 )
-
-        except KadArbitrBlockedError:
-            return EnrichKadArbitrCasesResult(
-                facts=KadArbitrFacts(
-                    status='blocked',
-                    participant=participant,
-                    participant_type=participant_type,
-                    cases=[],
-                    stats={},
-                    reason='blocked',
-                ),
-            )
-
-        except KadArbitrClientError:
-            return EnrichKadArbitrCasesResult(
-                facts=KadArbitrFacts(
-                    status='error',
-                    participant=participant,
-                    participant_type=participant_type,
-                    cases=[],
-                    stats={},
-                    reason='error',
-                ),
-            )
+            except KadArbitrBlockedError:
+                return EnrichKadArbitrCasesResult(
+                    facts=KadArbitrFacts(
+                        status='blocked',
+                        participant=participant,
+                        participant_type=participant_type,
+                        cases=[],
+                        stats={},
+                        reason='blocked',
+                    ),
+                )
+            except Exception as exc:
+                errors_count += 1
+                if len(error_examples) < 3:
+                    error_examples.append(
+                        {
+                            'case_id': case.case_id,
+                            'error': exc.__class__.__name__,
+                        }
+                    )
+                continue
 
         stats = {
-            'total': len(enriched_cases),
+            'cases_total_found': len(limited),
+            'cases_enriched_ok': len(enriched_cases),
+            'cases_failed': errors_count,
+            'cases_skipped': 0,
             'max_cases': max_cases,
         }
+        if error_examples:
+            stats['errors_examples'] = error_examples
+
         return EnrichKadArbitrCasesResult(
             facts=KadArbitrFacts(
                 status='ok',
@@ -158,21 +188,46 @@ def _select_target_role(
     """Выбрать роль целевого участника."""
 
     priority = {
-        'defendant': 3,
-        'plaintiff': 2,
-        'third_party': 1,
-        'other': 0,
+        'debtor': 0,
+        'defendant': 0,
+        'creditor': 1,
+        'applicant': 1,
+        'plaintiff': 1,
+        'third_party': 2,
+        'other': 3,
+        None: 4,
     }
     selected_role = None
-    selected_score = -1
+    selected_score = 99
+    selected_inn = False
+    selected_name_len = 0
+
     for participant in participants:
         if not participant.is_target_participant:
             continue
 
         role = participant.role
-        score = priority.get(role or '', 0)
-        if score > selected_score:
+        score = priority.get(role, 4)
+        has_inn = bool(participant.inn)
+        name_len = len(participant.name.strip())
+        if score < selected_score:
             selected_role = role
             selected_score = score
+            selected_inn = has_inn
+            selected_name_len = name_len
+            continue
+
+        if score != selected_score:
+            continue
+
+        if has_inn and not selected_inn:
+            selected_role = role
+            selected_inn = True
+            selected_name_len = name_len
+            continue
+
+        if has_inn == selected_inn and name_len > selected_name_len:
+            selected_role = role
+            selected_name_len = name_len
 
     return selected_role

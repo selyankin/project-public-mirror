@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sources.kad_arbitr.cache import LruTtlCache
+from sources.kad_arbitr.claim_classifier import extract_relevant_text
 from sources.kad_arbitr.models import (
     KadArbitrActOutcomeNormalized,
     KadArbitrJudicialActNormalized,
@@ -53,7 +54,8 @@ class ResolveKadArbitrActOutcome:
         )
         if cached_text is None:
             pdf_bytes = await self._fetcher.fetch(url=act.pdf_url)
-            text = self._text_extractor.extract_text(pdf_bytes=pdf_bytes)
+            raw_text = self._text_extractor.extract_text(pdf_bytes=pdf_bytes)
+            text = _trim_text(extract_relevant_text(raw_text))
             if self._text_cache is not None:
                 self._text_cache.set(cache_key, text)
         else:
@@ -72,3 +74,13 @@ class ResolveKadArbitrActOutcome:
         outcome.act_id = act.act_id
         outcome.extracted_text = text
         return outcome
+
+
+def _trim_text(value: str, *, limit: int = 30_000) -> str:
+    """Обрезать текст для анализа до безопасной длины."""
+
+    trimmed = value.strip()
+    if len(trimmed) <= limit:
+        return trimmed
+
+    return trimmed[:limit]
